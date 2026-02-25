@@ -22,7 +22,9 @@ https://disk.yandex.ru/i/ME3lrcJOnEWBBg
 ### Запланированные задачи
 Встреча 1 с заказчиком - https://disk.yandex.ru/i/WkM2TTrmjgUEMw
 
-(ветка reports была пересоздана, но встреча была загружена в день проведения https://github.com/moevm/mse1h2026-ripes/blob/reports/img/orphan.png)
+(ветка reports была пересоздана, но протокол был загружен в день проведения https://github.com/moevm/mse1h2026-ripes/blob/reports/img/orphan.png)
+
+Встреча с командой 1 - https://disk.yandex.ru/i/tUVToANd4QvjAA
 
 
 ### Выполненные задачи
@@ -44,5 +46,4 @@ https://disk.yandex.ru/i/ME3lrcJOnEWBBg
 2. Реализовать клавиатуру согласно стайл-гайду и всем требованиям
 3. Реализовать емисегментный индикатор согласно стайл-гайду и всем требованиям
 
-
-
+(Исходные видеоматериалы не прикрепляю, так как их размер даже в сжатом состоянии более 100мб)
