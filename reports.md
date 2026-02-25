@@ -20,7 +20,9 @@ https://github.com/moevm/mse1h2026-ripes/wiki
 https://disk.yandex.ru/i/ME3lrcJOnEWBBg
 
 ### Запланированные задачи
-Встреча 1 с заказчиком (ветка reports была пересоздана, но встреча была загржена в день проведения)
+Встреча 1 с заказчиком - https://disk.yandex.ru/i/WkM2TTrmjgUEMw
+
+(ветка reports была пересоздана, но встреча была загружена в день проведения https://github.com/moevm/mse1h2026-ripes/blob/reports/img/orphan.png)
 
 
 ### Выполненные задачи
