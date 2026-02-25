@@ -14,9 +14,10 @@ https://github.com/moevm/mse1h2026-ripes/wiki
 
 ## Итерация №1
 ### Презентация
+https://github.com/moevm/mse1h2026-ripes/blob/reports/presentations/%D0%B8%D1%82%D0%B5%D1%80%D0%B0%D1%86%D0%B8%D1%8F_1.pdf
 
 ### Скринкасты
-Скринкаст презентации 1
+Скринкаст итерации 1
 https://disk.yandex.ru/i/ME3lrcJOnEWBBg
 
 ### Запланированные задачи
