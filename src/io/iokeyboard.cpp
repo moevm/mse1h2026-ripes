@@ -122,7 +122,7 @@ void IOKeyboard::updateLayout() {
       bar->addWidget(cap);
       *valOut = new QLabel(init, this);
       (*valOut)->setStyleSheet(kStyleBadge);
-      (*valOut)->setMinimumWidth(36);
+      (*valOut)->setMinimumWidth(40);
       (*valOut)->setAlignment(Qt::AlignCenter);
       bar->addWidget(*valOut);
     };
@@ -304,7 +304,9 @@ void IOKeyboard::ioWrite(AInt offset, VInt value, unsigned) {
 void IOKeyboard::reset() {
   QMutexLocker lock(&m_bufMutex);
   m_keyBuffer.clear();
+  m_lastKey = 0;
   lock.unlock();
+  clearFlash();
   refreshStatusLabel();
 }
 
