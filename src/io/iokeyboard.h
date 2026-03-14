@@ -45,8 +45,20 @@ private:
   QHBoxLayout *addKeyRow(QVBoxLayout *parent);
   QPushButton *createKey(const QString &label, uint8_t ascii, int w = 36,
                          int h = 36);
+  void flashKey(uint8_t ascii);
+  void clearFlash();
+  void updateFifoDots(int used);
+
   QQueue<uint8_t> m_keyBuffer;
   mutable QMutex m_bufMutex;
+  uint8_t m_lastKey = 0;
+
+  QLabel *m_lblData = nullptr;
+  QLabel *m_lblChar = nullptr;
+  QLabel *m_lblFifoCount = nullptr;
+  QVector<QFrame *> m_fifoDots;
+  QMap<uint8_t, QPushButton *> m_keys;
+  QPushButton *m_flashedBtn = nullptr;
 
   QGridLayout *m_mainLayout = nullptr;
   QLabel *m_statusLabel = nullptr;
