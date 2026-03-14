@@ -1,11 +1,11 @@
 #pragma once
+#include "iobase.h"
 #include <QGridLayout>
 #include <QLabel>
 #include <QMutex>
 #include <QPushButton>
 #include <QQueue>
 #include <QWidget>
-#include "iobase.h"
 
 namespace Ripes {
 
@@ -22,9 +22,7 @@ public:
   QString description() const override { return QString(); }
   QString baseName() const override { return "Keyboard"; }
 
-  const std::vector<RegDesc> &registers() const override {
-    return m_regDescs;
-  }
+  const std::vector<RegDesc> &registers() const override { return m_regDescs; }
   const std::vector<IOSymbol> *extraSymbols() const override {
     return &m_extraSymbols;
   }
@@ -52,4 +50,4 @@ private:
   std::vector<IOSymbol> m_extraSymbols;
 };
 
-}
+} // namespace Ripes
