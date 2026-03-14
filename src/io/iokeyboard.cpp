@@ -6,7 +6,47 @@
 #include <QPushButton>
 
 namespace Ripes {
+// Stylesheets
+static const char *kStyleKey =
+    "QPushButton {"
+    "  background-color: #3a3a4a;"
+    "  color: #cccccc;"
+    "  border: 1px solid #555;"
+    "  border-radius: 5px;"
+    "  font: bold 11px;"
+    "}"
+    "QPushButton:hover   { background-color: #50506a; }"
+    "QPushButton:pressed { background-color: #d4b0e8; color: #333; }";
 
+static const char *kStyleKeyActive = "QPushButton {"
+                                     "  background-color: #d4b0e8;"
+                                     "  color: #333;"
+                                     "  border: 1px solid #b090c8;"
+                                     "  border-radius: 5px;"
+                                     "  font: bold 11px;"
+                                     "}";
+
+static const char *kStyleBadge = "QLabel {"
+                                 "  background-color: #3a3a5a;"
+                                 "  color: #eeeeee;"
+                                 "  border-radius: 3px;"
+                                 "  padding: 1px 5px;"
+                                 "  font: bold 11px;"
+                                 "}";
+
+static const char *kStyleCaption = "QLabel { color: #999; font: 10px; }";
+
+static const char *kStyleFifoFull =
+    "QFrame { background-color: #4488cc; border-radius: 2px; }";
+
+static const char *kStyleFifoEmpty =
+    "QFrame { background-color: #555555; border-radius: 2px; }";
+
+static const char *kStylePanel = "QWidget#keyboardPanel {"
+                                 "  background-color: #2a2a3a;"
+                                 "  border-radius: 8px;"
+                                 "}";
+                                 
 IOKeyboard::IOKeyboard(QWidget *parent) : IOBase(IOType::KEYBOARD, parent) {
   m_parameters[BUFSIZE] = IOParam(BUFSIZE, "Buffer size", 16, true, 1, 256);
   m_mainLayout = new QGridLayout(this);
@@ -27,7 +67,8 @@ void IOKeyboard::updateLayout() {
     auto *btn = new QPushButton(label, this);
     btn->setFixedSize(30, 30);
     btn->setFocusPolicy(Qt::NoFocus);
-    connect(btn, &QPushButton::clicked, this, [this, ascii]() { enqueueKey(ascii); });
+    connect(btn, &QPushButton::clicked, this,
+            [this, ascii]() { enqueueKey(ascii); });
     m_mainLayout->addWidget(btn, row, col, Qt::AlignCenter);
   };
 
@@ -104,7 +145,8 @@ VInt IOKeyboard::ioRead(AInt offset, unsigned) {
     QMutexLocker lock(&m_bufMutex);
     uint8_t val = m_keyBuffer.isEmpty() ? 0 : m_keyBuffer.dequeue();
     lock.unlock();
-    QMetaObject::invokeMethod(this, [this]() { refreshStatusLabel(); }, Qt::QueuedConnection);
+    QMetaObject::invokeMethod(
+        this, [this]() { refreshStatusLabel(); }, Qt::QueuedConnection);
     return val;
   }
   if (offset == 4) {
@@ -119,7 +161,8 @@ void IOKeyboard::ioWrite(AInt offset, VInt value, unsigned) {
     QMutexLocker lock(&m_bufMutex);
     m_keyBuffer.clear();
     lock.unlock();
-    QMetaObject::invokeMethod(this, [this]() { refreshStatusLabel(); }, Qt::QueuedConnection);
+    QMetaObject::invokeMethod(
+        this, [this]() { refreshStatusLabel(); }, Qt::QueuedConnection);
   }
 }
 
@@ -130,4 +173,4 @@ void IOKeyboard::reset() {
   refreshStatusLabel();
 }
 
-}
+} // namespace Ripes
