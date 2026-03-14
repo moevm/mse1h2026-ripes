@@ -1,10 +1,12 @@
 #pragma once
 #include "iobase.h"
-#include <QGridLayout>
+#include <QFrame>
 #include <QLabel>
+#include <QMap>
 #include <QMutex>
 #include <QPushButton>
 #include <QQueue>
+#include <QVBoxLayout>
 #include <QWidget>
 
 namespace Ripes {
@@ -19,7 +21,7 @@ public:
   ~IOKeyboard() { unregister(); }
 
   unsigned byteSize() const override { return 8; }
-  QString description() const override { return QString(); }
+  QString description() const override { return QString(); } // TODO
   QString baseName() const override { return "Keyboard"; }
 
   const std::vector<RegDesc> &registers() const override { return m_regDescs; }
@@ -32,7 +34,7 @@ public:
   void reset() override;
 
 protected:
-  void parameterChanged(unsigned) override { updateLayout(); }
+  void parameterChanged(unsigned) override;
   void keyPressEvent(QKeyEvent *event) override;
 
 private:
@@ -40,6 +42,9 @@ private:
   void enqueueKey(uint8_t ascii);
   void refreshStatusLabel();
 
+  QHBoxLayout *addKeyRow(QVBoxLayout *parent);
+  QPushButton *createKey(const QString &label, uint8_t ascii, int w = 36,
+                         int h = 36);
   QQueue<uint8_t> m_keyBuffer;
   mutable QMutex m_bufMutex;
 

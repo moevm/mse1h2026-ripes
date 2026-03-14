@@ -46,13 +46,33 @@ static const char *kStylePanel = "QWidget#keyboardPanel {"
                                  "  background-color: #2a2a3a;"
                                  "  border-radius: 8px;"
                                  "}";
-                                 
+
 IOKeyboard::IOKeyboard(QWidget *parent) : IOBase(IOType::KEYBOARD, parent) {
   m_parameters[BUFSIZE] = IOParam(BUFSIZE, "Buffer size", 16, true, 1, 256);
-  m_mainLayout = new QGridLayout(this);
-  setLayout(m_mainLayout);
+  setObjectName("keyboardPanel");
+  setStyleSheet(kStylePanel);
   setFocusPolicy(Qt::StrongFocus);
   updateLayout();
+}
+
+QHBoxLayout *IOKeyboard::addKeyRow(QVBoxLayout *parent) {
+  auto *row = new QHBoxLayout();
+  row->setSpacing(4);
+  row->setAlignment(Qt::AlignCenter);
+  parent->addLayout(row);
+  return row;
+}
+
+QPushButton *IOKeyboard::createKey(const QString &label, uint8_t ascii, int w,
+                                   int h) {
+  auto *btn = new QPushButton(label, this);
+  btn->setFixedSize(w, h);
+  btn->setFocusPolicy(Qt::NoFocus);
+  btn->setStyleSheet(kStyleKey);
+  connect(btn, &QPushButton::clicked, this,
+          [this, ascii]() { enqueueKey(ascii); });
+  m_keys[ascii] = btn;
+  return btn;
 }
 
 void IOKeyboard::updateLayout() {
