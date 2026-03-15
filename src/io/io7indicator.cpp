@@ -58,9 +58,12 @@ IO7Indicator::IO7Indicator(QWidget *parent)
   m_parameters[DIGITS] = IOParam(DIGITS, "# Digits", 4, true, 1, 8);
   m_parameters[DIGIT_SIZE] =
       IOParam(DIGIT_SIZE, "Digit size", 64, true, 30, 120);
+  m_parameters[COLOR] = IOParam(COLOR, "Color", 0, true, 0, NUM_COLORS - 1);
 
   m_digitValues.assign(numDigits(), 0);
   rebuildRegDescs();
+  buildUI();
+  connect(this, &IOBase::scheduleUpdate, this, [this]() { refreshDisplay(); });
 }
 
 QString IO7Indicator::description() const {
