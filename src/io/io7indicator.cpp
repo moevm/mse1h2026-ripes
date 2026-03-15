@@ -250,24 +250,10 @@ QString IO7Indicator::description() const {
 
 unsigned IO7Indicator::byteSize() const { return numDigits() * 4; }
 
-void IO7Indicator::parameterChanged(unsigned ID) {
+void IO7Indicator::parameterChanged(unsigned /*ID*/) {
   if (m_updating)
     return;
   m_updating = true;
-
-  if (ID == COLOR) {
-    int ci =
-        m_parameters.count(COLOR) ? m_parameters.at(COLOR).value.toInt() : 0;
-    if (m_displayWidget)
-      m_displayWidget->setColorIndex(ci);
-    if (m_comboColor && m_comboColor->currentIndex() != ci) {
-      m_comboColor->blockSignals(true);
-      m_comboColor->setCurrentIndex(ci);
-      m_comboColor->blockSignals(false);
-    }
-    m_updating = false;
-    return;
-  }
 
   const unsigned n = numDigits();
   m_digitValues.resize(n, 0);
@@ -284,6 +270,15 @@ void IO7Indicator::parameterChanged(unsigned ID) {
     m_spinDigits->blockSignals(true);
     m_spinDigits->setValue(static_cast<int>(n));
     m_spinDigits->blockSignals(false);
+  }
+  if (m_comboColor) {
+    int ci =
+        m_parameters.count(COLOR) ? m_parameters.at(COLOR).value.toInt() : 0;
+    if (m_comboColor->currentIndex() != ci) {
+      m_comboColor->blockSignals(true);
+      m_comboColor->setCurrentIndex(ci);
+      m_comboColor->blockSignals(false);
+    }
   }
 
   rebuildHexLabels();
@@ -382,6 +377,8 @@ void IO7Indicator::drawDigit(QPainter &p, int x, int y, int w, int h,
 }
 
 void IO7Indicator::buildUI() {
+  setMinimumSize(380, 230);
+  setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
   setAutoFillBackground(true);
   QPalette pal = palette();
   pal.setColor(QPalette::Window, QColor(30, 30, 42));
