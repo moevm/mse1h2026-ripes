@@ -34,6 +34,30 @@ static const uint8_t SEG_MAP[16] = {
 };
 static constexpr uint8_t SEG_MINUS = 0x40;
 static constexpr uint8_t SEG_DP = 0x80;
+static const char *const kWidgetBg = "background: #1e1e2a;";
+
+static const char *const kSpinStyle =
+    "QSpinBox { background: #2a2a38; color: #ddd; border: 1px solid #555;"
+    " border-radius: 3px; padding: 2px 4px; font-size: 11px; }";
+
+static const char *const kComboStyle =
+    "QComboBox { background: #2a2a38; color: #ddd; border: 1px solid #555;"
+    " border-radius: 3px; padding: 2px 8px; font-size: 11px; }"
+    "QComboBox::drop-down { border: none; }"
+    "QComboBox QAbstractItemView { background: #2a2a38; color: #ddd;"
+    " selection-background-color: #444; }";
+
+static const char *const kBtnStyle =
+    "QPushButton { background: #2a2a38; color: #ccc; border: 1px solid #555;"
+    " border-radius: 3px; padding: 2px 10px;"
+    " font-family: monospace; font-size: 11px; }"
+    "QPushButton:hover { background: #3a3a4a; }"
+    "QPushButton:pressed { background: #1a1a28; }";
+
+static const char *const kHexLabelStyle =
+    "QLabel { background: #252532; color: #aaa; border: 1px solid #3a3a48;"
+    " border-radius: 10px; padding: 2px 8px;"
+    " font-family: monospace; font-size: 10px; }";
 
 unsigned IO7Indicator::numDigits() const {
   auto it = m_parameters.find(DIGITS);
