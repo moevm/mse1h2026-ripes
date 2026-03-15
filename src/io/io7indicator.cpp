@@ -34,28 +34,31 @@ static const uint8_t SEG_MAP[16] = {
 };
 static constexpr uint8_t SEG_MINUS = 0x40;
 static constexpr uint8_t SEG_DP = 0x80;
-static const char *const kWidgetBg = "background: #1e1e2a;";
+static const char *const kWidgetBg = "background: #F0F0F0;";
 
 static const char *const kSpinStyle =
-    "QSpinBox { background: #2a2a38; color: #ddd; border: 1px solid #555;"
-    " border-radius: 3px; padding: 2px 4px; font-size: 11px; }";
+    "QSpinBox { background: #FFFFFF; color: #333; border: 1px solid #CCC;"
+    " border-radius: 3px; padding: 2px 4px; font-size: 11px; }"
+    "QSpinBox:focus { border-color: #6699CC; }";
 
 static const char *const kComboStyle =
-    "QComboBox { background: #2a2a38; color: #ddd; border: 1px solid #555;"
+    "QComboBox { background: #FFFFFF; color: #333; border: 1px solid #CCC;"
     " border-radius: 3px; padding: 2px 8px; font-size: 11px; }"
+    "QComboBox:hover { border-color: #AAA; }"
     "QComboBox::drop-down { border: none; }"
-    "QComboBox QAbstractItemView { background: #2a2a38; color: #ddd;"
-    " selection-background-color: #444; }";
+    "QComboBox QAbstractItemView { background: #FFFFFF; color: #333;"
+    " selection-background-color: #D0E0F0; selection-color: #333;"
+    " border: 1px solid #CCC; }";
 
 static const char *const kBtnStyle =
-    "QPushButton { background: #2a2a38; color: #ccc; border: 1px solid #555;"
+    "QPushButton { background: #FFFFFF; color: #444; border: 1px solid #CCC;"
     " border-radius: 3px; padding: 2px 10px;"
     " font-family: monospace; font-size: 11px; }"
-    "QPushButton:hover { background: #3a3a4a; }"
-    "QPushButton:pressed { background: #1a1a28; }";
+    "QPushButton:hover { background: #E8E8E8; border-color: #AAA; }"
+    "QPushButton:pressed { background: #D0D0D0; }";
 
 static const char *const kHexLabelStyle =
-    "QLabel { background: #252532; color: #aaa; border: 1px solid #3a3a48;"
+    "QLabel { background: #FFFFFF; color: #555; border: 1px solid #DDD;"
     " border-radius: 10px; padding: 2px 8px;"
     " font-family: monospace; font-size: 10px; }";
 
@@ -331,7 +334,7 @@ QSize IO7Indicator::minimumSizeHint() const {
 void IO7Indicator::paintEvent(QPaintEvent *) {
   QPainter p(this);
   p.setRenderHint(QPainter::Antialiasing);
-  p.fillRect(rect(), QColor(20, 20, 20));
+  p.fillRect(rect(), QColor(240, 240, 240));
 
   const int n = static_cast<int>(m_digitValues.size());
   if (n == 0)
@@ -518,6 +521,8 @@ void IO7Indicator::rebuildHexLabels() {
   // new labels
   for (unsigned i = 0; i < numDigits(); i++) {
     auto *lbl = new QLabel;
+    lbl->setMinimumWidth(80);
+    lbl->setMinimumHeight(20);
     lbl->setStyleSheet(kHexLabelStyle);
     lbl->setAlignment(Qt::AlignCenter);
     m_hexBarLayout->addWidget(lbl);
