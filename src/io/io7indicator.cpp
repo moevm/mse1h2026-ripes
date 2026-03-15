@@ -59,6 +59,156 @@ static const char *const kHexLabelStyle =
     " border-radius: 10px; padding: 2px 8px;"
     " font-family: monospace; font-size: 10px; }";
 
+// SegmentDisplayWidget – renders display
+class SegmentDisplayWidget : public QWidget {
+public:
+  explicit SegmentDisplayWidget(QWidget *parent = nullptr) : QWidget(parent) {
+    setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+  }
+
+  void setDigitValues(const std::vector<uint8_t> &v) {
+    m_vals = v;
+    update();
+  }
+  void setColorIndex(int i) {
+    m_ci = qBound(0, i, NUM_COLORS - 1);
+    update();
+  }
+  void setNumDigits(int n) {
+    m_n = qMax(1, n);
+    updateGeometry();
+    update();
+  }
+
+protected:
+  QSize sizeHint() const override { return {340, 130}; }
+  QSize minimumSizeHint() const override { return {140, 70}; }
+
+  void paintEvent(QPaintEvent *) override {
+    QPainter p(this);
+    p.setRenderHint(QPainter::Antialiasing);
+
+    p.setPen(QPen(QColor(40, 40, 52), 1));
+    p.setBrush(QColor(15, 15, 22));
+    p.drawRoundedRect(rect().adjusted(0, 0, -1, -1), 8, 8);
+
+    if (m_n <= 0)
+      return;
+
+    const int pad = 10;
+    const int regH = 16;
+    int availH = height() - 2 * pad - regH;
+    int availW = width() - 2 * pad;
+    int digitH = qMax(24, availH);
+    int digitW = digitH * 2 / 3;
+    int gap = qMax(4, digitH / 7);
+    int totalW = m_n * digitW + (m_n - 1) * gap;
+
+    if (totalW > availW && m_n > 0) {
+      qreal d = m_n * (2.0 / 3.0) + (m_n - 1) * (1.0 / 7.0);
+      if (d > 0)
+        digitH = qMin(digitH, static_cast<int>(availW / d));
+      digitH = qMax(24, digitH);
+      digitW = digitH * 2 / 3;
+      gap = qMax(4, digitH / 7);
+      totalW = m_n * digitW + (m_n - 1) * gap;
+    }
+
+    const int x0 = (width() - totalW) / 2;
+    const int y0 = pad + qMax(0, (availH - digitH) / 2);
+
+    // each digit
+    for (int i = 0; i < m_n; i++) {
+      const int dx = x0 + i * (digitW + gap);
+      uint8_t v = (i < static_cast<int>(m_vals.size())) ? m_vals[i] : 0;
+      drawDigit(p, dx, y0, digitW, digitH, v);
+    }
+
+    // REG
+    QFont f = font();
+    f.setPixelSize(qBound(8, digitH / 8, 11));
+    p.setFont(f);
+    p.setPen(QColor(110, 110, 125));
+    for (int i = 0; i < m_n; i++) {
+      const int dx = x0 + i * (digitW + gap);
+      QRect lr(dx, y0 + digitH + 2, digitW, regH);
+      p.drawText(lr, Qt::AlignHCenter | Qt::AlignTop,
+                 QStringLiteral("REG%1").arg(i));
+    }
+  }
+
+private:
+  void drawDigit(QPainter &p, int x, int y, int w, int h, uint8_t seg) {
+    const auto &c = s_colors[m_ci];
+
+    const qreal t = qMin(w, h) * 0.11;
+    const qreal g = t * 0.25;
+
+    const qreal lx = x + t, rx = x + w - t;
+    const qreal ty = y + t, my = y + h / 2.0, by = y + h - t;
+
+    auto hSeg = [t](qreal x1, qreal yc, qreal x2) -> QPolygonF {
+      const qreal ht = t / 2.0;
+      return {{x1, yc}, {x1 + ht, yc - ht}, {x2 - ht, yc - ht},
+              {x2, yc}, {x2 - ht, yc + ht}, {x1 + ht, yc + ht}};
+    };
+    auto vSeg = [t](qreal xc, qreal y1, qreal y2) -> QPolygonF {
+      const qreal ht = t / 2.0;
+      return {{xc, y1}, {xc + ht, y1 + ht}, {xc + ht, y2 - ht},
+              {xc, y2}, {xc - ht, y2 - ht}, {xc - ht, y1 + ht}};
+    };
+
+    const QPolygonF polys[7] = {
+        hSeg(lx + g, ty, rx - g), // a  top
+        vSeg(rx, ty + g, my - g), // b  right-top
+        vSeg(rx, my + g, by - g), // c  right-bot
+        hSeg(lx + g, by, rx - g), // d  bottom
+        vSeg(lx, my + g, by - g), // e  left-bot
+        vSeg(lx, ty + g, my - g), // f  left-top
+        hSeg(lx + g, my, rx - g), // g  middle
+    };
+
+    p.setPen(Qt::NoPen);
+
+    for (int i = 0; i < 7; i++) {
+      if (!((seg >> i) & 1))
+        continue;
+      QColor gc = c.glow;
+      gc.setAlpha(35);
+      p.setBrush(gc);
+      QPointF cen;
+      for (const auto &pt : polys[i])
+        cen += pt;
+      cen /= polys[i].size();
+      QPolygonF gp;
+      for (const auto &pt : polys[i])
+        gp << cen + (pt - cen) * 1.5;
+      p.drawPolygon(gp);
+    }
+
+    for (int i = 0; i < 7; i++) {
+      p.setBrush((seg >> i) & 1 ? c.on : c.off);
+      p.drawPolygon(polys[i]);
+    }
+
+    const qreal dpR = t * 0.55;
+    const QPointF dpC(x + w + t * 0.4, by);
+    const bool dpOn = (seg >> 7) & 1;
+    if (dpOn) {
+      QColor gc = c.glow;
+      gc.setAlpha(35);
+      p.setBrush(gc);
+      p.drawEllipse(dpC, dpR * 1.8, dpR * 1.8);
+    }
+    p.setBrush(dpOn ? c.on : c.off);
+    p.drawEllipse(dpC, dpR, dpR);
+  }
+
+  std::vector<uint8_t> m_vals;
+  int m_ci = 0;
+  int m_n = 4;
+};
+
 unsigned IO7Indicator::numDigits() const {
   auto it = m_parameters.find(DIGITS);
   if (it == m_parameters.end())
