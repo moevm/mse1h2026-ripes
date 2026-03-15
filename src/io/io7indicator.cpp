@@ -1,11 +1,39 @@
 #include "io7indicator.h"
 #include "ioregistry.h"
 
+#include <QBoxLayout>
+#include <QComboBox>
+#include <QLabel>
 #include <QPainter>
+#include <QPushButton>
+#include <QSpinBox>
 #include <algorithm>
 
 namespace Ripes {
 
+struct ColorDef {
+  QString name;
+  QColor on, off, glow;
+};
+
+static const ColorDef s_colors[] = {
+    {"Red", {255, 30, 30}, {50, 10, 10}, {255, 80, 80}},
+    {"Green", {30, 255, 30}, {10, 50, 10}, {80, 255, 80}},
+    {"Blue", {50, 130, 255}, {15, 25, 55}, {100, 170, 255}},
+    {"Yellow", {255, 220, 30}, {55, 48, 10}, {255, 235, 100}},
+    {"White", {230, 230, 240}, {45, 45, 50}, {250, 250, 255}},
+};
+
+static constexpr int NUM_COLORS =
+    static_cast<int>(sizeof(s_colors) / sizeof(s_colors[0]));
+
+// quick test buttons
+static const uint8_t SEG_MAP[16] = {
+    0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07,
+    0x7F, 0x6F, 0x77, 0x7C, 0x39, 0x5E, 0x79, 0x71,
+};
+static constexpr uint8_t SEG_MINUS = 0x40;
+static constexpr uint8_t SEG_DP = 0x80;
 
 unsigned IO7Indicator::numDigits() const {
   auto it = m_parameters.find(DIGITS);
