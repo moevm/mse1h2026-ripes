@@ -45,6 +45,9 @@ private:
 
   void buildUI();
   void refreshDisplay();
+  void rebuildHexLabels();
+  void updateRegLabels();
+  void applyQuickTest(const std::vector<uint8_t> &values);
 
   std::vector<uint8_t> m_digitValues;
   std::vector<RegDesc> m_regDescs;

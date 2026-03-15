@@ -257,6 +257,30 @@ void IO7Indicator::parameterChanged(unsigned /*ID*/) {
   m_digitValues.resize(n, 0);
   rebuildRegDescs();
 
+  if (m_displayWidget) {
+    m_displayWidget->setNumDigits(static_cast<int>(n));
+    m_displayWidget->setColorIndex(
+        m_parameters.count(COLOR) ? m_parameters.at(COLOR).value.toInt() : 0);
+    m_displayWidget->setDigitValues(m_digitValues);
+  }
+
+  if (m_spinDigits && m_spinDigits->value() != static_cast<int>(n)) {
+    m_spinDigits->blockSignals(true);
+    m_spinDigits->setValue(static_cast<int>(n));
+    m_spinDigits->blockSignals(false);
+  }
+  if (m_comboColor) {
+    int ci =
+        m_parameters.count(COLOR) ? m_parameters.at(COLOR).value.toInt() : 0;
+    if (m_comboColor->currentIndex() != ci) {
+      m_comboColor->blockSignals(true);
+      m_comboColor->setCurrentIndex(ci);
+      m_comboColor->blockSignals(false);
+    }
+  }
+
+  rebuildHexLabels();
+
   updateGeometry();
   update();
   emit regMapChanged();
@@ -348,6 +372,173 @@ void IO7Indicator::drawDigit(QPainter &p, int x, int y, int w, int h,
   p.setPen(Qt::NoPen);
   p.setBrush((seg >> 7) & 1 ? on : off);
   p.drawEllipse(QPointF(x + w + t * 0.5, bot), t * 0.5, t * 0.5);
+}
+
+void IO7Indicator::buildUI() {
+  setAutoFillBackground(true);
+  QPalette pal = palette();
+  pal.setColor(QPalette::Window, QColor(30, 30, 42));
+  setPalette(pal);
+
+  auto *root = new QVBoxLayout(this);
+  root->setContentsMargins(6, 6, 6, 6);
+  root->setSpacing(5);
+
+  auto *topBar = new QHBoxLayout;
+  topBar->setSpacing(8);
+
+  auto *lblDig = new QLabel(QStringLiteral("# Digits"));
+  lblDig->setStyleSheet("color:#bbb; font-size:11px;");
+  topBar->addWidget(lblDig);
+
+  m_spinDigits = new QSpinBox;
+  m_spinDigits->setRange(1, 8);
+  m_spinDigits->setValue(static_cast<int>(numDigits()));
+  m_spinDigits->setFixedWidth(60);
+  m_spinDigits->setStyleSheet(kSpinStyle);
+  topBar->addWidget(m_spinDigits);
+  connect(m_spinDigits, QOverload<int>::of(&QSpinBox::valueChanged), this,
+          [this](int v) { setParameter(DIGITS, v); });
+
+  topBar->addSpacing(16);
+
+  auto *lblCol = new QLabel(QStringLiteral("Color"));
+  lblCol->setStyleSheet("color:#bbb; font-size:11px;");
+  topBar->addWidget(lblCol);
+
+  m_comboColor = new QComboBox;
+  for (int i = 0; i < NUM_COLORS; i++)
+    m_comboColor->addItem(s_colors[i].name);
+  m_comboColor->setCurrentIndex(0);
+  m_comboColor->setFixedWidth(100);
+  m_comboColor->setStyleSheet(kComboStyle);
+  topBar->addWidget(m_comboColor);
+  connect(m_comboColor, QOverload<int>::of(&QComboBox::currentIndexChanged),
+          this, [this](int i) { setParameter(COLOR, i); });
+
+  topBar->addStretch();
+  root->addLayout(topBar);
+
+  m_displayWidget = new SegmentDisplayWidget(this);
+  m_displayWidget->setNumDigits(static_cast<int>(numDigits()));
+  m_displayWidget->setColorIndex(0);
+  m_displayWidget->setDigitValues(m_digitValues);
+  root->addWidget(m_displayWidget, /*stretch=*/1);
+
+  auto *testBar = new QHBoxLayout;
+  testBar->setSpacing(6);
+
+  auto *lblTest = new QLabel(QStringLiteral("Quick test:"));
+  lblTest->setStyleSheet("color:#999; font-size:11px;");
+  testBar->addWidget(lblTest);
+
+  auto addBtn = [&](const QString &label, auto slot) {
+    auto *b = new QPushButton(label);
+    b->setFixedHeight(24);
+    b->setStyleSheet(kBtnStyle);
+    testBar->addWidget(b);
+    connect(b, &QPushButton::clicked, this, slot);
+  };
+
+  addBtn(QStringLiteral("1234"), [this]() {
+    std::vector<uint8_t> v(numDigits(), 0);
+    const uint8_t d[] = {SEG_MAP[1], SEG_MAP[2], SEG_MAP[3], SEG_MAP[4]};
+    for (unsigned i = 0; i < qMin(numDigits(), 4u); i++)
+      v[i] = d[i];
+    applyQuickTest(v);
+  });
+
+  addBtn(QStringLiteral("-5"), [this]() {
+    std::vector<uint8_t> v(numDigits(), 0);
+    if (numDigits() >= 1)
+      v[0] = SEG_MINUS;
+    if (numDigits() >= 2)
+      v[1] = SEG_MAP[5];
+    applyQuickTest(v);
+  });
+
+  addBtn(QStringLiteral("12.34"), [this]() {
+    std::vector<uint8_t> v(numDigits(), 0);
+    if (numDigits() >= 1)
+      v[0] = SEG_MAP[1];
+    if (numDigits() >= 2)
+      v[1] = SEG_MAP[2] | SEG_DP;
+    if (numDigits() >= 3)
+      v[2] = SEG_MAP[3];
+    if (numDigits() >= 4)
+      v[3] = SEG_MAP[4];
+    applyQuickTest(v);
+  });
+
+  addBtn(QStringLiteral("dEAd"), [this]() {
+    std::vector<uint8_t> v(numDigits(), 0);
+    const uint8_t d[] = {SEG_MAP[0xD], SEG_MAP[0xE], SEG_MAP[0xA],
+                         SEG_MAP[0xD]};
+    for (unsigned i = 0; i < qMin(numDigits(), 4u); i++)
+      v[i] = d[i];
+    applyQuickTest(v);
+  });
+
+  addBtn(QStringLiteral("Clear"),
+         [this]() { applyQuickTest(std::vector<uint8_t>(numDigits(), 0)); });
+
+  testBar->addStretch();
+  root->addLayout(testBar);
+
+  m_hexBarLayout = new QHBoxLayout;
+  m_hexBarLayout->setSpacing(6);
+  root->addLayout(m_hexBarLayout);
+
+  rebuildHexLabels();
+}
+
+void IO7Indicator::refreshDisplay() {
+  if (m_displayWidget) {
+    m_displayWidget->setDigitValues(m_digitValues);
+    m_displayWidget->setNumDigits(static_cast<int>(numDigits()));
+  }
+  updateRegLabels();
+}
+
+void IO7Indicator::rebuildHexLabels() {
+  // old labels
+  for (auto *lbl : m_regHexLabels)
+    lbl->deleteLater();
+  m_regHexLabels.clear();
+
+  while (m_hexBarLayout->count() > 0) {
+    auto *item = m_hexBarLayout->takeAt(0);
+    delete item;
+  }
+
+  // new labels
+  for (unsigned i = 0; i < numDigits(); i++) {
+    auto *lbl = new QLabel;
+    lbl->setStyleSheet(kHexLabelStyle);
+    lbl->setAlignment(Qt::AlignCenter);
+    m_hexBarLayout->addWidget(lbl);
+    m_regHexLabels.push_back(lbl);
+  }
+  m_hexBarLayout->addStretch();
+
+  updateRegLabels();
+}
+
+void IO7Indicator::updateRegLabels() {
+  for (unsigned i = 0; i < m_regHexLabels.size(); i++) {
+    unsigned offset = i * 4;
+    uint8_t val = (i < m_digitValues.size()) ? m_digitValues[i] : 0;
+    QString oStr = QString("%1").arg(offset, 2, 16, QChar('0')); // lowercase
+    QString vStr = QString("%1").arg(val, 2, 16, QChar('0')).toUpper();
+    m_regHexLabels[i]->setText(QStringLiteral("[%1] 0x%2").arg(oStr, vStr));
+  }
+}
+
+void IO7Indicator::applyQuickTest(const std::vector<uint8_t> &values) {
+  const unsigned n = numDigits();
+  for (unsigned i = 0; i < n; i++)
+    m_digitValues[i] = (i < values.size()) ? values[i] : 0;
+  emit scheduleUpdate();
 }
 
 } // namespace Ripes
