@@ -47,7 +47,6 @@ private:
                          int h = 36);
   void flashKey(uint8_t ascii);
   void clearFlash();
-  void updateFifoDots(int used);
 
   QQueue<uint8_t> m_keyBuffer;
   mutable QMutex m_bufMutex;
@@ -56,7 +55,6 @@ private:
   QLabel *m_lblData = nullptr;
   QLabel *m_lblChar = nullptr;
   QLabel *m_lblFifoCount = nullptr;
-  QVector<QFrame *> m_fifoDots;
   QMap<uint8_t, QPushButton *> m_keys;
   QPushButton *m_flashedBtn = nullptr;
 

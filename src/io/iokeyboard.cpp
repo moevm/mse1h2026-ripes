@@ -36,12 +36,6 @@ static const char *kStyleBadge = "QLabel {"
 
 static const char *kStyleCaption = "QLabel { color: #999; font: 10px; }";
 
-static const char *kStyleFifoFull =
-    "QFrame { background-color: #4488cc; border-radius: 2px; }";
-
-static const char *kStyleFifoEmpty =
-    "QFrame { background-color: #555555; border-radius: 2px; }";
-
 static const char *kStylePanel = "QWidget#keyboardPanel {"
                                  "  background-color: #2a2a3a;"
                                  "  border-radius: 8px;"
@@ -57,7 +51,6 @@ IOKeyboard::IOKeyboard(QWidget *parent) : IOBase(IOType::KEYBOARD, parent) {
 
 void IOKeyboard::updateLayout() {
   m_keys.clear();
-  m_fifoDots.clear();
   m_flashedBtn = nullptr;
   m_statusLabel = nullptr;
   m_lblData = nullptr;
@@ -135,21 +128,16 @@ void IOKeyboard::updateLayout() {
 
     bar->addStretch(1);
 
+    const unsigned bufSize = m_parameters.at(BUFSIZE).value.toUInt();
+
     auto *fifoLabel = new QLabel("FIFO", this);
     fifoLabel->setStyleSheet(kStyleCaption);
     bar->addWidget(fifoLabel);
 
-    const unsigned bufSize = m_parameters.at(BUFSIZE).value.toUInt();
-    for (unsigned i = 0; i < bufSize; ++i) {
-      auto *dot = new QFrame(this);
-      dot->setFixedSize(12, 12);
-      dot->setStyleSheet(kStyleFifoEmpty);
-      bar->addWidget(dot);
-      m_fifoDots.append(dot);
-    }
-
     m_lblFifoCount = new QLabel(QString("0/%1").arg(bufSize), this);
-    m_lblFifoCount->setStyleSheet(kStyleCaption);
+    m_lblFifoCount->setStyleSheet(kStyleBadge);
+    m_lblFifoCount->setMinimumWidth(40);
+    m_lblFifoCount->setAlignment(Qt::AlignCenter);
     bar->addWidget(m_lblFifoCount);
 
     root->addLayout(bar);
@@ -201,8 +189,6 @@ void IOKeyboard::refreshStatusLabel() {
       m_lblChar->setText(" ");
   }
 
-  updateFifoDots(count);
-
   const unsigned bufSize = m_parameters.at(BUFSIZE).value.toUInt();
   if (m_lblFifoCount)
     m_lblFifoCount->setText(QString("%1/%2").arg(count).arg(bufSize));
@@ -242,11 +228,6 @@ void IOKeyboard::clearFlash() {
     m_flashedBtn->setStyleSheet(kStyleKey);
     m_flashedBtn = nullptr;
   }
-}
-
-void IOKeyboard::updateFifoDots(int used) {
-  for (int i = 0; i < m_fifoDots.size(); ++i)
-    m_fifoDots[i]->setStyleSheet(i < used ? kStyleFifoFull : kStyleFifoEmpty);
 }
 
 void IOKeyboard::keyPressEvent(QKeyEvent *event) {
