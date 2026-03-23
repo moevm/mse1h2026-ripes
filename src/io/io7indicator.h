@@ -43,7 +43,7 @@ private:
   unsigned numDigits() const;
   void rebuildRegDescs();
   void drawDigit(QPainter &p, int x, int y, int w, int h, uint8_t segments);
-  void initExtraSymbols(); 
+  void initExtraSymbols();
 
   void buildUI();
   void refreshDisplay();
