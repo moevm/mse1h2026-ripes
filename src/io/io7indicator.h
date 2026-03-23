@@ -53,7 +53,6 @@ private:
 
   std::vector<uint8_t> m_digitValues;
   std::vector<RegDesc> m_regDescs;
-  //std::vector<IOSymbol> m_extraSymbols;
   bool m_updating = false;
 
   SegmentDisplayWidget *m_displayWidget = nullptr;
