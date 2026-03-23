@@ -26,6 +26,8 @@ static const ColorDef s_colors[] = {
 
 static constexpr int NUM_COLORS =
     static_cast<int>(sizeof(s_colors) / sizeof(s_colors[0]));
+static constexpr unsigned MAX_DIGITS = 8;
+static std::vector<IOSymbol> s_extraSymbols;
 
 // quick test buttons
 static const uint8_t SEG_MAP[16] = {
@@ -232,6 +234,27 @@ void IO7Indicator::rebuildRegDescs() {
   }
 }
 
+void IO7Indicator::initExtraSymbols() {
+  if (s_extraSymbols.empty()) {
+    s_extraSymbols.reserve(3 + MAX_DIGITS);
+
+    s_extraSymbols.push_back(IOSymbol{"SEVENSEG_BASE", 0});
+    s_extraSymbols.push_back(
+        IOSymbol{"SEVENSEG_SIZE", static_cast<AInt>(MAX_DIGITS * 4)});
+    s_extraSymbols.push_back(
+        IOSymbol{"SEVENSEG_N_DIGITS", static_cast<AInt>(MAX_DIGITS)});
+
+    for (unsigned i = 0; i < MAX_DIGITS; ++i) {
+      s_extraSymbols.push_back(IOSymbol{QStringLiteral("SEVENSEG_%1").arg(i),
+                                        static_cast<AInt>(i * 4)});
+    }
+  }
+}
+
+const std::vector<IOSymbol> *IO7Indicator::extraSymbols() const {
+  return &s_extraSymbols;
+}
+
 IO7Indicator::IO7Indicator(QWidget *parent)
     : IOBase(IOType::SEVEN_SEGMENT, parent) {
   m_parameters[DIGITS] = IOParam(DIGITS, "# Digits", 4, true, 1, 8);
@@ -241,6 +264,7 @@ IO7Indicator::IO7Indicator(QWidget *parent)
 
   m_digitValues.assign(numDigits(), 0);
   rebuildRegDescs();
+  initExtraSymbols();
   buildUI();
   connect(this, &IOBase::scheduleUpdate, this, [this]() { refreshDisplay(); });
 }
@@ -295,23 +319,30 @@ void IO7Indicator::parameterChanged(unsigned /*ID*/) {
 }
 
 VInt IO7Indicator::ioRead(AInt offset, unsigned size) {
-  VInt r = 0;
-  for (unsigned i = 0; i < size; i++) {
-    AInt addr = offset + i;
-    unsigned idx = static_cast<unsigned>(addr / 4);
-    if (addr % 4 == 0 && idx < m_digitValues.size())
-      r |= static_cast<VInt>(m_digitValues[idx]) << (i * 8);
-  }
-  return r;
+  if (size != 4 || (offset % 4) != 0)
+    return static_cast<VInt>(0);
+
+  const unsigned idx = static_cast<unsigned>(offset / 4);
+
+  if (idx >= m_digitValues.size())
+    return static_cast<VInt>(0);
+
+  return static_cast<VInt>(m_digitValues[idx]);
 }
 
 void IO7Indicator::ioWrite(AInt offset, VInt value, unsigned size) {
-  for (unsigned i = 0; i < size; i++) {
-    AInt addr = offset + i;
-    unsigned idx = static_cast<unsigned>(addr / 4);
-    if (addr % 4 == 0 && idx < m_digitValues.size())
-      m_digitValues[idx] = static_cast<uint8_t>((value >> (i * 8)) & 0xFF);
-  }
+  if (size != 4 || (offset % 4) != 0)
+    return;
+
+  const unsigned idx = static_cast<unsigned>(offset / 4);
+
+  if (idx >= m_digitValues.size())
+    return;
+
+  const uint8_t regVal = static_cast<uint8_t>(value & static_cast<VInt>(0xFF));
+
+  m_digitValues[idx] = regVal;
+
   emit scheduleUpdate();
 }
 

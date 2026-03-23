@@ -28,6 +28,7 @@ public:
   QString baseName() const override { return "Seven Segment"; }
 
   const std::vector<RegDesc> &registers() const override { return m_regDescs; }
+  const std::vector<IOSymbol> *extraSymbols() const override;
 
   VInt ioRead(AInt offset, unsigned size) override;
   void ioWrite(AInt offset, VInt value, unsigned size) override;
@@ -42,6 +43,7 @@ private:
   unsigned numDigits() const;
   void rebuildRegDescs();
   void drawDigit(QPainter &p, int x, int y, int w, int h, uint8_t segments);
+  void initExtraSymbols(); 
 
   void buildUI();
   void refreshDisplay();
@@ -51,6 +53,7 @@ private:
 
   std::vector<uint8_t> m_digitValues;
   std::vector<RegDesc> m_regDescs;
+  //std::vector<IOSymbol> m_extraSymbols;
   bool m_updating = false;
 
   SegmentDisplayWidget *m_displayWidget = nullptr;
