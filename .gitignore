@@ -6,7 +6,7 @@ Makefile
 build*
 .vscode
 .idea/
-
+.env
 
 # Qt generated files
 moc_*
