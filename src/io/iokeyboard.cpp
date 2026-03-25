@@ -124,46 +124,6 @@ void IOKeyboard::refreshStatusLabel() {
     return;
 
   const unsigned bufSize = m_parameters.at(BUFSIZE).value.toUInt();
-<<<<<<< Updated upstream
-  if (m_lblFifoCount)
-    m_lblFifoCount->setText(QString("%1/%2").arg(count).arg(bufSize));
-}
-
-QHBoxLayout *IOKeyboard::addKeyRow(QVBoxLayout *parent) {
-  auto *row = new QHBoxLayout();
-  row->setSpacing(4);
-  row->setAlignment(Qt::AlignCenter);
-  parent->addLayout(row);
-  return row;
-}
-
-QPushButton *IOKeyboard::createKey(const QString &label, uint8_t ascii, int w,
-                                   int h) {
-  auto *btn = new QPushButton(label, this);
-  btn->setFixedSize(w, h);
-  btn->setFocusPolicy(Qt::NoFocus);
-  btn->setStyleSheet(kStyleKey);
-  connect(btn, &QPushButton::clicked, this,
-          [this, ascii]() { enqueueKey(ascii); });
-  m_keys[ascii] = btn;
-  return btn;
-}
-
-void IOKeyboard::flashKey(uint8_t ascii) {
-  clearFlash();
-  auto it = m_keys.find(ascii);
-  if (it != m_keys.end()) {
-    m_flashedBtn = it.value();
-    m_flashedBtn->setStyleSheet(kStyleKeyActive);
-  }
-}
-
-void IOKeyboard::clearFlash() {
-  if (m_flashedBtn) {
-    m_flashedBtn->setStyleSheet(kStyleKey);
-    m_flashedBtn = nullptr;
-  }
-=======
   QString charStr =
       (ch >= 0x20 && ch < 0x7F) ? QString(QChar(ch)) : QString("--");
   m_statusLabel->setText(
@@ -172,7 +132,6 @@ void IOKeyboard::clearFlash() {
           .arg(ch, 2, 16, QChar('0'))
           .arg(count)
           .arg(bufSize));
->>>>>>> Stashed changes
 }
 
 void IOKeyboard::keyPressEvent(QKeyEvent *event) {

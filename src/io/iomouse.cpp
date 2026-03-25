@@ -21,57 +21,9 @@ IOMouse::IOMouse(QWidget *parent) : IOBase(IOType::MOUSE, parent) {
   m_regDescs.push_back(
       RegDesc{"SCROLL", RegDesc::RW::RW, 32, SCROLL * 4, true});
 
-<<<<<<< Updated upstream
-    setMouseTracking(true);
-    setFocusPolicy(Qt::StrongFocus);
-
-    // ---- Width spin box ----
-    m_widthSpin = new QSpinBox(this);
-    m_widthSpin->setRange(310, 800);
-    m_widthSpin->setValue(static_cast<int>(m_width));
-    m_widthSpin->setFixedSize(68, 22);
-    connect(m_widthSpin, QOverload<int>::of(&QSpinBox::valueChanged), this,
-            [this](int v) {
-                m_width = static_cast<unsigned>(v);
-                if (m_mouseX >= static_cast<int>(m_width))
-                    m_mouseX = static_cast<int>(m_width) - 1;
-                m_extraSymbols.clear();
-                m_extraSymbols.push_back(IOSymbol{"WIDTH", m_width});
-                m_extraSymbols.push_back(IOSymbol{"HEIGHT", m_height});
-                applySize();
-            });
-
-    // ---- Height spin box ----
-    m_heightSpin = new QSpinBox(this);
-    m_heightSpin->setRange(100, 600);
-    m_heightSpin->setValue(static_cast<int>(m_height));
-    m_heightSpin->setFixedSize(68, 22);
-    connect(m_heightSpin, QOverload<int>::of(&QSpinBox::valueChanged), this,
-            [this](int v) {
-                m_height = static_cast<unsigned>(v);
-                if (m_mouseY >= static_cast<int>(m_height))
-                    m_mouseY = static_cast<int>(m_height) - 1;
-                m_extraSymbols.clear();
-                m_extraSymbols.push_back(IOSymbol{"WIDTH", m_width});
-                m_extraSymbols.push_back(IOSymbol{"HEIGHT", m_height});
-                applySize();
-            });
-
-    // ---- Reset button ----
-    m_resetBtn = new QPushButton("Reset", this);
-    m_resetBtn->setFixedSize(52, 22);
-    connect(m_resetBtn, &QPushButton::clicked, this, [this]() {
-        reset();
-        update();
-    });
-
-    // Force initial size
-    applySize();
-=======
   updateExtraSymbols();
   setMouseTracking(true);
   setFocusPolicy(Qt::StrongFocus);
->>>>>>> Stashed changes
 }
 
 void IOMouse::updateExtraSymbols() {
