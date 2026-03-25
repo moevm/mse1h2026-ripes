@@ -21,7 +21,7 @@ public:
   ~IOKeyboard() { unregister(); }
 
   unsigned byteSize() const override { return 8; }
-  QString description() const override { return QString(); } // TODO
+  QString description() const override;
   QString baseName() const override { return "Keyboard"; }
 
   const std::vector<RegDesc> &registers() const override { return m_regDescs; }

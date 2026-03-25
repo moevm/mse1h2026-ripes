@@ -1,0 +1,17 @@
+services:
+  ripes-vnc:
+    build:
+      context: .
+      dockerfile: ripes_QT.dockerfile
+      args:
+        BRANCH: master
+    image: ripes-vnc:latest
+    container_name: ripes-vnc
+    ports:
+      - "6080:80"      # noVNC web interface
+      - "5900:5900"    # VNC direct connection
+    volumes:
+      - ./projects:/home/developer/projects 
+    restart: unless-stopped
+    stdin_open: true
+    tty: true

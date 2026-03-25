@@ -1,9 +1,13 @@
 #include "iokeyboard.h"
 #include "ioregistry.h"
+
+#include <QFrame>
+#include <QHBoxLayout>
 #include <QKeyEvent>
 #include <QLabel>
 #include <QMutexLocker>
 #include <QPushButton>
+#include <QVBoxLayout>
 
 namespace Ripes {
 // Stylesheets
@@ -47,6 +51,33 @@ IOKeyboard::IOKeyboard(QWidget *parent) : IOBase(IOType::KEYBOARD, parent) {
   setStyleSheet(kStylePanel);
   setFocusPolicy(Qt::StrongFocus);
   updateLayout();
+}
+
+QString IOKeyboard::description() const {
+  return "Memory-mapped keyboard with configurable FIFO buffer.\n\n"
+         "Register map (8 bytes):\n"
+         "  0x00  KEY_DATA    R    — dequeue next ASCII code (0 if empty)\n"
+         "  0x04  KEY_STATUS  R/W  — R: buffer count, W: write !=0 to clear";
+}
+
+QHBoxLayout *IOKeyboard::addKeyRow(QVBoxLayout *parent) {
+  auto *row = new QHBoxLayout();
+  row->setSpacing(4);
+  row->setAlignment(Qt::AlignCenter);
+  parent->addLayout(row);
+  return row;
+}
+
+QPushButton *IOKeyboard::createKey(const QString &label, uint8_t ascii,
+                                   int w, int h) {
+  auto *btn = new QPushButton(label, this);
+  btn->setFixedSize(w, h);
+  btn->setFocusPolicy(Qt::NoFocus);
+  btn->setStyleSheet(kStyleKey);
+  connect(btn, &QPushButton::clicked, this,
+          [this, ascii]() { enqueueKey(ascii); });
+  m_keys[ascii] = btn;
+  return btn;
 }
 
 void IOKeyboard::updateLayout() {
@@ -144,7 +175,7 @@ void IOKeyboard::updateLayout() {
   }
 
   m_regDescs.clear();
-  m_regDescs.push_back(RegDesc{"KEY_DATA", RegDesc::RW::R, 8, 0, true});
+  m_regDescs.push_back(RegDesc{"KEY_DATA",   RegDesc::RW::R,  8,  0, true});
   m_regDescs.push_back(RegDesc{"KEY_STATUS", RegDesc::RW::RW, 32, 4, true});
 
   unsigned bufSize = m_parameters.at(BUFSIZE).value.toUInt();
