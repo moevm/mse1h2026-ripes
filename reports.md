@@ -72,6 +72,7 @@ https://github.com/moevm/mse1h2026-ripes/blob/reports/presentations/%D0%B8%D1%82
 https://disk.yandex.ru/i/h3Q4krJQ1ZGKHA
 
 Встреча 2 с заказчиком - https://disk.yandex.ru/i/LjbvsLWbwg3Hcg
+
 Встреча 3 с заказчиком - https://disk.yandex.ru/d/uTHsRxjMg8WN3A
 
 Встреча 2 с командой - https://disk.yandex.ru/d/TefTvjAiunPG9g
