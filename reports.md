@@ -8,6 +8,10 @@ https://github.com/moevm/mse1h2026-ripes/wiki
 Инструкция по запуску представлена в README файле
 https://github.com/moevm/mse1h2026-ripes/blob/master/README.md
 
+*Обновлено
+
+Добавлена сборка через docker https://github.com/moevm/mse1h2026-ripes/wiki/DOCKER
+
 Для компиляции программ на C для RISC-V представлена на wiki-странице Risc‐V C compiler
 
 https://github.com/moevm/mse1h2026-ripes/wiki
