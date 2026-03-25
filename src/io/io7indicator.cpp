@@ -1,43 +1,49 @@
 #include "io7indicator.h"
 #include "ioregistry.h"
 
-#include <QBoxLayout>
-#include <QComboBox>
-#include <QLabel>
 #include <QPainter>
+<<<<<<< Updated upstream
 #include <QPushButton>
 #include <QSpinBox>
 #include <algorithm>
+=======
+#include <QSizePolicy>
+>>>>>>> Stashed changes
 
 namespace Ripes {
 
-struct ColorDef {
-  QString name;
-  QColor on, off, glow;
+namespace {
+
+struct SegColor {
+  QColor on;
+  QColor off;
 };
 
-static const ColorDef s_colors[] = {
-    {"Red", {255, 30, 30}, {50, 10, 10}, {255, 80, 80}},
-    {"Green", {30, 255, 30}, {10, 50, 10}, {80, 255, 80}},
-    {"Blue", {50, 130, 255}, {15, 25, 55}, {100, 170, 255}},
-    {"Yellow", {255, 220, 30}, {55, 48, 10}, {255, 235, 100}},
-    {"White", {230, 230, 240}, {45, 45, 50}, {250, 250, 255}},
+static const SegColor s_segColors[] = {
+    {{255, 30, 30}, {50, 10, 10}},
+    {{30, 255, 30}, {10, 50, 10}},
+    {{50, 130, 255}, {15, 25, 55}},
+    {{255, 220, 30}, {55, 48, 10}},
+    {{230, 230, 240}, {45, 45, 50}},
 };
 
+<<<<<<< Updated upstream
 static constexpr int NUM_COLORS =
     static_cast<int>(sizeof(s_colors) / sizeof(s_colors[0]));
 static constexpr unsigned MAX_DIGITS = 8;
 static std::vector<IOSymbol> s_extraSymbols;
+=======
+static constexpr int s_numColors =
+    static_cast<int>(sizeof(s_segColors) / sizeof(s_segColors[0]));
+static constexpr qreal s_digitAspect = 0.62;
+static constexpr qreal s_gapRatio = 0.14;
+>>>>>>> Stashed changes
 
-// quick test buttons
-static const uint8_t SEG_MAP[16] = {
-    0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07,
-    0x7F, 0x6F, 0x77, 0x7C, 0x39, 0x5E, 0x79, 0x71,
-};
-static constexpr uint8_t SEG_MINUS = 0x40;
-static constexpr uint8_t SEG_DP = 0x80;
-static const char *const kWidgetBg = "background: #F0F0F0;";
+QPolygonF horizontalSegment(const QRectF &rect) {
+  const qreal bevel = qMin(rect.height() * 0.8, rect.width() / 3.0);
+  const qreal cy = rect.center().y();
 
+<<<<<<< Updated upstream
 static const char *const kSpinStyle =
     "QSpinBox { background: #FFFFFF; color: #333; border: 1px solid #CCC;"
     " border-radius: 3px; padding: 2px 4px; font-size: 11px; }"
@@ -232,12 +238,23 @@ void IO7Indicator::rebuildRegDescs() {
     m_regDescs.push_back(RegDesc{QString("Digit %1").arg(i), RegDesc::RW::RW, 8,
                                  static_cast<AInt>(i * 4), true});
   }
+=======
+  QPolygonF polygon;
+  polygon << QPointF(rect.left() + bevel, rect.top())
+          << QPointF(rect.right() - bevel, rect.top())
+          << QPointF(rect.right(), cy)
+          << QPointF(rect.right() - bevel, rect.bottom())
+          << QPointF(rect.left() + bevel, rect.bottom())
+          << QPointF(rect.left(), cy);
+  return polygon;
+>>>>>>> Stashed changes
 }
 
-void IO7Indicator::initExtraSymbols() {
-  if (s_extraSymbols.empty()) {
-    s_extraSymbols.reserve(3 + MAX_DIGITS);
+QPolygonF verticalSegment(const QRectF &rect) {
+  const qreal bevel = qMin(rect.width() * 0.8, rect.height() / 3.0);
+  const qreal cx = rect.center().x();
 
+<<<<<<< Updated upstream
     s_extraSymbols.push_back(IOSymbol{"SEVENSEG_BASE", 0});
     s_extraSymbols.push_back(
         IOSymbol{"SEVENSEG_SIZE", static_cast<AInt>(MAX_DIGITS * 4)});
@@ -249,32 +266,56 @@ void IO7Indicator::initExtraSymbols() {
                                         static_cast<AInt>(i * 4)});
     }
   }
+=======
+  QPolygonF polygon;
+  polygon << QPointF(rect.left(), rect.top() + bevel)
+          << QPointF(cx, rect.top())
+          << QPointF(rect.right(), rect.top() + bevel)
+          << QPointF(rect.right(), rect.bottom() - bevel)
+          << QPointF(cx, rect.bottom())
+          << QPointF(rect.left(), rect.bottom() - bevel);
+  return polygon;
+>>>>>>> Stashed changes
 }
 
-const std::vector<IOSymbol> *IO7Indicator::extraSymbols() const {
-  return &s_extraSymbols;
 }
 
 IO7Indicator::IO7Indicator(QWidget *parent)
     : IOBase(IOType::SEVEN_SEGMENT, parent) {
+<<<<<<< Updated upstream
   m_parameters[DIGITS] = IOParam(DIGITS, "# Digits", 4, true, 1, 8);
+=======
+  setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
+
+>>>>>>> Stashed changes
   m_parameters[DIGIT_SIZE] =
       IOParam(DIGIT_SIZE, "Digit size", 64, true, 30, 120);
-  m_parameters[COLOR] = IOParam(COLOR, "Color", 0, true, 0, NUM_COLORS - 1);
+  m_parameters[COLOR] =
+      IOParam(COLOR, "Color", 0, true, 0, s_numColors - 1);
 
+<<<<<<< Updated upstream
   m_digitValues.assign(numDigits(), 0);
   rebuildRegDescs();
   initExtraSymbols();
   buildUI();
   connect(this, &IOBase::scheduleUpdate, this, [this]() { refreshDisplay(); });
+=======
+  m_digitValues.assign(NUM_DIGITS, 0);
+  setMinimumSize(minimumSizeHint());
+  updateRegDescs();
+>>>>>>> Stashed changes
 }
 
 QString IO7Indicator::description() const {
-  return QStringLiteral("7-segment indicator.\n"
-                        "Each digit is a 4-byte word (offset = index * 4).\n"
-                        "Bits 0-6 = segments a-g, bit 7 = decimal point.");
+  QStringList desc;
+  desc << "7-segment display with " + QString::number(NUM_DIGITS) +
+              " digits.";
+  desc << "Each digit is a 4-byte word (offset = index * 4).";
+  desc << "Bits 0-6 = segments a-g, bit 7 = decimal point.";
+  return desc.join('\n');
 }
 
+<<<<<<< Updated upstream
 unsigned IO7Indicator::byteSize() const { return numDigits() * 4; }
 
 void IO7Indicator::parameterChanged(unsigned /*ID*/) {
@@ -307,25 +348,48 @@ void IO7Indicator::parameterChanged(unsigned /*ID*/) {
       m_comboColor->blockSignals(false);
     }
   }
+=======
+unsigned IO7Indicator::byteSize() const {
+  return NUM_DIGITS * 4;
+}
+
+void IO7Indicator::updateRegDescs() {
+  m_regDescs.clear();
+  for (unsigned i = 0; i < NUM_DIGITS; ++i) {
+    m_regDescs.push_back(
+        RegDesc{QString("Digit %1").arg(i), RegDesc::RW::RW, 8,
+                static_cast<AInt>(i * 4), true});
+  }
+
+  m_extraSymbols.clear();
+  m_extraSymbols.push_back(IOSymbol{"N_DIGITS", NUM_DIGITS});
+>>>>>>> Stashed changes
 
   rebuildHexLabels();
 
   updateGeometry();
+<<<<<<< Updated upstream
   update();
   emit regMapChanged();
   emit sizeChanged();
+=======
+  emit regMapChanged();
+}
+>>>>>>> Stashed changes
 
-  m_updating = false;
+void IO7Indicator::parameterChanged(unsigned) {
+  setMinimumSize(minimumSizeHint());
+  updateGeometry();
+  update();
 }
 
 VInt IO7Indicator::ioRead(AInt offset, unsigned size) {
   if (size != 4 || (offset % 4) != 0)
-    return static_cast<VInt>(0);
+    return 0;
 
   const unsigned idx = static_cast<unsigned>(offset / 4);
-
   if (idx >= m_digitValues.size())
-    return static_cast<VInt>(0);
+    return 0;
 
   return static_cast<VInt>(m_digitValues[idx]);
 }
@@ -335,14 +399,10 @@ void IO7Indicator::ioWrite(AInt offset, VInt value, unsigned size) {
     return;
 
   const unsigned idx = static_cast<unsigned>(offset / 4);
-
   if (idx >= m_digitValues.size())
     return;
 
-  const uint8_t regVal = static_cast<uint8_t>(value & static_cast<VInt>(0xFF));
-
-  m_digitValues[idx] = regVal;
-
+  m_digitValues[idx] = static_cast<uint8_t>(value & 0xFF);
   emit scheduleUpdate();
 }
 
@@ -352,6 +412,7 @@ void IO7Indicator::reset() {
 }
 
 QSize IO7Indicator::minimumSizeHint() const {
+<<<<<<< Updated upstream
   auto it = m_parameters.find(DIGIT_SIZE);
   const int h = (it != m_parameters.end()) ? it->second.value.toInt() : 64;
   const int w = h * 2 / 3;
@@ -360,29 +421,101 @@ QSize IO7Indicator::minimumSizeHint() const {
   const int totalW = n * w + (n - 1) * gap;
   const int pad = 16;
   return QSize(totalW + pad, h + pad);
+=======
+  const int digitH = m_parameters.at(DIGIT_SIZE).value.toInt();
+  const int digitW = qRound(digitH * s_digitAspect);
+  const int gap = qMax(4, digitH / 7);
+  const int margin = qMax(8, digitH / 6);
+  const int n = static_cast<int>(NUM_DIGITS);
+
+  return QSize(n * digitW + (n - 1) * gap + margin * 2,
+               digitH + margin * 2);
+}
+
+void IO7Indicator::drawDigit(QPainter &p, int x, int y, int w, int h,
+                             uint8_t seg) {
+  if (w <= 0 || h <= 0)
+    return;
+
+  const int ci =
+      qBound(0, m_parameters.at(COLOR).value.toInt(), s_numColors - 1);
+  const QColor &on = s_segColors[ci].on;
+  const QColor &off = s_segColors[ci].off;
+
+  const qreal thickness = qMax<qreal>(2.0, qMin(w, h) * 0.10);
+  const qreal xPad = thickness * 0.75;
+  const qreal yPad = thickness * 0.45;
+  const qreal midY = y + h / 2.0;
+
+  const qreal topY = y + yPad;
+  const qreal bottomY = y + h - yPad - thickness;
+  const qreal horizLeft = x + xPad + thickness * 0.2;
+  const qreal horizRight = x + w - xPad - thickness * 0.2;
+  const qreal horizWidth = qMax<qreal>(1.0, horizRight - horizLeft);
+
+  const qreal leftX = x + xPad;
+  const qreal rightX = x + w - xPad - thickness;
+
+  const qreal upperTop = topY + thickness * 0.7;
+  const qreal upperBottom = midY - thickness * 0.7;
+  const qreal lowerTop = midY + thickness * 0.2;
+  const qreal lowerBottom = bottomY - thickness * 0.2;
+
+  const qreal upperHeight = qMax<qreal>(1.0, upperBottom - upperTop);
+  const qreal lowerHeight = qMax<qreal>(1.0, lowerBottom - lowerTop);
+
+  const QRectF segments[7] = {
+      QRectF(horizLeft, topY, horizWidth, thickness),
+      QRectF(rightX, upperTop, thickness, upperHeight),
+      QRectF(rightX, lowerTop, thickness, lowerHeight),
+      QRectF(horizLeft, bottomY, horizWidth, thickness),
+      QRectF(leftX, lowerTop, thickness, lowerHeight),
+      QRectF(leftX, upperTop, thickness, upperHeight),
+      QRectF(horizLeft, midY - thickness / 2.0, horizWidth, thickness),
+  };
+
+  p.setPen(Qt::NoPen);
+
+  for (int i = 0; i < 7; ++i) {
+    p.setBrush((seg >> i) & 1 ? on : off);
+    if (i == 0 || i == 3 || i == 6)
+      p.drawPolygon(horizontalSegment(segments[i]));
+    else
+      p.drawPolygon(verticalSegment(segments[i]));
+  }
+
+  const qreal dotRadius = thickness * 0.34;
+  const QPointF dotCenter(x + w - dotRadius * 1.8, y + h - dotRadius * 1.8);
+
+  p.setBrush((seg >> 7) & 1 ? on : off);
+  p.drawEllipse(dotCenter, dotRadius, dotRadius);
+>>>>>>> Stashed changes
 }
 
 void IO7Indicator::paintEvent(QPaintEvent *) {
-  QPainter p(this);
-  p.setRenderHint(QPainter::Antialiasing);
-  p.fillRect(rect(), QColor(240, 240, 240));
+  QPainter painter(this);
+  painter.setRenderHint(QPainter::Antialiasing, true);
+  painter.fillRect(rect(), Qt::black);
 
   const int n = static_cast<int>(m_digitValues.size());
   if (n == 0)
     return;
 
-  auto it = m_parameters.find(DIGIT_SIZE);
-  const int h = (it != m_parameters.end()) ? it->second.value.toInt() : 64;
-  const int w = h * 2 / 3;
-  const int gap = 6;
-  const int totalW = n * w + (n - 1) * gap;
-  const int x0 = (width() - totalW) / 2;
-  const int y0 = (height() - h) / 2;
+  const int margin = qMax(6, qMin(width(), height()) / 18);
+  const QRectF area = rect().adjusted(margin, margin, -margin, -margin);
+  if (area.width() <= 0 || area.height() <= 0)
+    return;
 
-  for (int i = 0; i < n; i++)
-    drawDigit(p, x0 + i * (w + gap), y0, w, h, m_digitValues[i]);
-}
+  const qreal digitHFromWidth =
+      area.width() / (n * s_digitAspect + (n - 1) * s_gapRatio);
+  const qreal digitH = qMax<qreal>(1.0, qMin(area.height(), digitHFromWidth));
+  const qreal digitW = digitH * s_digitAspect;
+  const qreal gap = qMax<qreal>(2.0, digitH * s_gapRatio);
+  const qreal totalW = n * digitW + (n - 1) * gap;
+  const qreal startX = area.left() + (area.width() - totalW) / 2.0;
+  const qreal startY = area.top() + (area.height() - digitH) / 2.0;
 
+<<<<<<< Updated upstream
 void IO7Indicator::drawDigit(QPainter &p, int x, int y, int w, int h,
                              uint8_t seg) {
   const QColor on(255, 30, 30), off(50, 10, 10);
@@ -582,3 +715,13 @@ void IO7Indicator::applyQuickTest(const std::vector<uint8_t> &values) {
 }
 
 } // namespace Ripes
+=======
+  for (int i = 0; i < n; ++i) {
+    const qreal x = startX + i * (digitW + gap);
+    drawDigit(painter, qRound(x), qRound(startY), qRound(digitW),
+              qRound(digitH), m_digitValues[i]);
+  }
+}
+
+}
+>>>>>>> Stashed changes
