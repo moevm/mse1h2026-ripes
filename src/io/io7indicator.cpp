@@ -6,7 +6,6 @@
 #include <QLabel>
 #include <QPainter>
 #include <QPushButton>
-#include <QSpinBox>
 #include <algorithm>
 
 namespace Ripes {
@@ -26,7 +25,7 @@ static const ColorDef s_colors[] = {
 
 static constexpr int NUM_COLORS =
     static_cast<int>(sizeof(s_colors) / sizeof(s_colors[0]));
-static constexpr unsigned MAX_DIGITS = 8;
+static constexpr unsigned MAX_DIGITS = IO7Indicator::NUM_DIGITS;
 static std::vector<IOSymbol> s_extraSymbols;
 
 // quick test buttons
@@ -37,11 +36,6 @@ static const uint8_t SEG_MAP[16] = {
 static constexpr uint8_t SEG_MINUS = 0x40;
 static constexpr uint8_t SEG_DP = 0x80;
 static const char *const kWidgetBg = "background: #F0F0F0;";
-
-static const char *const kSpinStyle =
-    "QSpinBox { background: #FFFFFF; color: #333; border: 1px solid #CCC;"
-    " border-radius: 3px; padding: 2px 4px; font-size: 11px; }"
-    "QSpinBox:focus { border-color: #6699CC; }";
 
 static const char *const kComboStyle =
     "QComboBox { background: #FFFFFF; color: #333; border: 1px solid #CCC;"
@@ -216,16 +210,8 @@ private:
   int m_n = 4;
 };
 
-unsigned IO7Indicator::numDigits() const {
-  auto it = m_parameters.find(DIGITS);
-  if (it == m_parameters.end())
-    return 4;
-  unsigned n = it->second.value.toUInt();
-  return (n >= 1 && n <= 8) ? n : 4;
-}
-
 void IO7Indicator::rebuildRegDescs() {
-  const unsigned n = numDigits();
+  const unsigned n = NUM_DIGITS;
   m_regDescs.clear();
   m_regDescs.reserve(n);
   for (unsigned i = 0; i < n; i++) {
@@ -242,9 +228,9 @@ void IO7Indicator::initExtraSymbols() {
     s_extraSymbols.push_back(
         IOSymbol{"SEVENSEG_SIZE", static_cast<AInt>(MAX_DIGITS * 4)});
     s_extraSymbols.push_back(
-        IOSymbol{"SEVENSEG_N_DIGITS", static_cast<AInt>(MAX_DIGITS)});
+        IOSymbol{"SEVENSEG_N_DIGITS", static_cast<AInt>(NUM_DIGITS)});
 
-    for (unsigned i = 0; i < MAX_DIGITS; ++i) {
+    for (unsigned i = 0; i < NUM_DIGITS; ++i) {
       s_extraSymbols.push_back(IOSymbol{QStringLiteral("SEVENSEG_%1").arg(i),
                                         static_cast<AInt>(i * 4)});
     }
@@ -257,12 +243,11 @@ const std::vector<IOSymbol> *IO7Indicator::extraSymbols() const {
 
 IO7Indicator::IO7Indicator(QWidget *parent)
     : IOBase(IOType::SEVEN_SEGMENT, parent) {
-  m_parameters[DIGITS] = IOParam(DIGITS, "# Digits", 4, true, 1, 8);
   m_parameters[DIGIT_SIZE] =
       IOParam(DIGIT_SIZE, "Digit size", 64, true, 30, 120);
   m_parameters[COLOR] = IOParam(COLOR, "Color", 0, true, 0, NUM_COLORS - 1);
 
-  m_digitValues.assign(numDigits(), 0);
+  m_digitValues.assign(NUM_DIGITS, 0);
   rebuildRegDescs();
   initExtraSymbols();
   buildUI();
@@ -275,29 +260,19 @@ QString IO7Indicator::description() const {
                         "Bits 0-6 = segments a-g, bit 7 = decimal point.");
 }
 
-unsigned IO7Indicator::byteSize() const { return numDigits() * 4; }
+unsigned IO7Indicator::byteSize() const { return NUM_DIGITS * 4; }
 
 void IO7Indicator::parameterChanged(unsigned /*ID*/) {
   if (m_updating)
     return;
   m_updating = true;
 
-  const unsigned n = numDigits();
-  m_digitValues.resize(n, 0);
-  rebuildRegDescs();
-
   if (m_displayWidget) {
-    m_displayWidget->setNumDigits(static_cast<int>(n));
     m_displayWidget->setColorIndex(
         m_parameters.count(COLOR) ? m_parameters.at(COLOR).value.toInt() : 0);
     m_displayWidget->setDigitValues(m_digitValues);
   }
 
-  if (m_spinDigits && m_spinDigits->value() != static_cast<int>(n)) {
-    m_spinDigits->blockSignals(true);
-    m_spinDigits->setValue(static_cast<int>(n));
-    m_spinDigits->blockSignals(false);
-  }
   if (m_comboColor) {
     int ci =
         m_parameters.count(COLOR) ? m_parameters.at(COLOR).value.toInt() : 0;
@@ -308,12 +283,8 @@ void IO7Indicator::parameterChanged(unsigned /*ID*/) {
     }
   }
 
-  rebuildHexLabels();
-
   updateGeometry();
   update();
-  emit regMapChanged();
-  emit sizeChanged();
 
   m_updating = false;
 }
@@ -356,7 +327,7 @@ QSize IO7Indicator::minimumSizeHint() const {
   const int h = (it != m_parameters.end()) ? it->second.value.toInt() : 64;
   const int w = h * 2 / 3;
   const int gap = 6;
-  const int n = static_cast<int>(numDigits());
+  const int n = static_cast<int>(NUM_DIGITS);
   const int totalW = n * w + (n - 1) * gap;
   const int pad = 16;
   return QSize(totalW + pad, h + pad);
@@ -425,21 +396,6 @@ void IO7Indicator::buildUI() {
   auto *topBar = new QHBoxLayout;
   topBar->setSpacing(8);
 
-  auto *lblDig = new QLabel(QStringLiteral("# Digits"));
-  lblDig->setStyleSheet("color:#bbb; font-size:11px;");
-  topBar->addWidget(lblDig);
-
-  m_spinDigits = new QSpinBox;
-  m_spinDigits->setRange(1, 8);
-  m_spinDigits->setValue(static_cast<int>(numDigits()));
-  m_spinDigits->setFixedWidth(60);
-  m_spinDigits->setStyleSheet(kSpinStyle);
-  topBar->addWidget(m_spinDigits);
-  connect(m_spinDigits, QOverload<int>::of(&QSpinBox::valueChanged), this,
-          [this](int v) { setParameter(DIGITS, v); });
-
-  topBar->addSpacing(16);
-
   auto *lblCol = new QLabel(QStringLiteral("Color"));
   lblCol->setStyleSheet("color:#bbb; font-size:11px;");
   topBar->addWidget(lblCol);
@@ -458,7 +414,7 @@ void IO7Indicator::buildUI() {
   root->addLayout(topBar);
 
   m_displayWidget = new SegmentDisplayWidget(this);
-  m_displayWidget->setNumDigits(static_cast<int>(numDigits()));
+  m_displayWidget->setNumDigits(static_cast<int>(NUM_DIGITS));
   m_displayWidget->setColorIndex(0);
   m_displayWidget->setDigitValues(m_digitValues);
   root->addWidget(m_displayWidget, /*stretch=*/1);
@@ -479,46 +435,40 @@ void IO7Indicator::buildUI() {
   };
 
   addBtn(QStringLiteral("1234"), [this]() {
-    std::vector<uint8_t> v(numDigits(), 0);
+    std::vector<uint8_t> v(NUM_DIGITS, 0);
     const uint8_t d[] = {SEG_MAP[1], SEG_MAP[2], SEG_MAP[3], SEG_MAP[4]};
-    for (unsigned i = 0; i < qMin(numDigits(), 4u); i++)
+    for (unsigned i = 0; i < NUM_DIGITS; i++)
       v[i] = d[i];
     applyQuickTest(v);
   });
 
   addBtn(QStringLiteral("-5"), [this]() {
-    std::vector<uint8_t> v(numDigits(), 0);
-    if (numDigits() >= 1)
-      v[0] = SEG_MINUS;
-    if (numDigits() >= 2)
-      v[1] = SEG_MAP[5];
+    std::vector<uint8_t> v(NUM_DIGITS, 0);
+    v[0] = SEG_MINUS;
+    v[1] = SEG_MAP[5];
     applyQuickTest(v);
   });
 
   addBtn(QStringLiteral("12.34"), [this]() {
-    std::vector<uint8_t> v(numDigits(), 0);
-    if (numDigits() >= 1)
-      v[0] = SEG_MAP[1];
-    if (numDigits() >= 2)
-      v[1] = SEG_MAP[2] | SEG_DP;
-    if (numDigits() >= 3)
-      v[2] = SEG_MAP[3];
-    if (numDigits() >= 4)
-      v[3] = SEG_MAP[4];
+    std::vector<uint8_t> v(NUM_DIGITS, 0);
+    v[0] = SEG_MAP[1];
+    v[1] = SEG_MAP[2] | SEG_DP;
+    v[2] = SEG_MAP[3];
+    v[3] = SEG_MAP[4];
     applyQuickTest(v);
   });
 
   addBtn(QStringLiteral("dEAd"), [this]() {
-    std::vector<uint8_t> v(numDigits(), 0);
+    std::vector<uint8_t> v(NUM_DIGITS, 0);
     const uint8_t d[] = {SEG_MAP[0xD], SEG_MAP[0xE], SEG_MAP[0xA],
                          SEG_MAP[0xD]};
-    for (unsigned i = 0; i < qMin(numDigits(), 4u); i++)
+    for (unsigned i = 0; i < NUM_DIGITS; i++)
       v[i] = d[i];
     applyQuickTest(v);
   });
 
   addBtn(QStringLiteral("Clear"),
-         [this]() { applyQuickTest(std::vector<uint8_t>(numDigits(), 0)); });
+         [this]() { applyQuickTest(std::vector<uint8_t>(NUM_DIGITS, 0)); });
 
   testBar->addStretch();
   root->addLayout(testBar);
@@ -533,7 +483,6 @@ void IO7Indicator::buildUI() {
 void IO7Indicator::refreshDisplay() {
   if (m_displayWidget) {
     m_displayWidget->setDigitValues(m_digitValues);
-    m_displayWidget->setNumDigits(static_cast<int>(numDigits()));
   }
   updateRegLabels();
 }
@@ -550,7 +499,7 @@ void IO7Indicator::rebuildHexLabels() {
   }
 
   // new labels
-  for (unsigned i = 0; i < numDigits(); i++) {
+  for (unsigned i = 0; i < NUM_DIGITS; i++) {
     auto *lbl = new QLabel;
     lbl->setMinimumWidth(80);
     lbl->setMinimumHeight(20);
@@ -575,8 +524,7 @@ void IO7Indicator::updateRegLabels() {
 }
 
 void IO7Indicator::applyQuickTest(const std::vector<uint8_t> &values) {
-  const unsigned n = numDigits();
-  for (unsigned i = 0; i < n; i++)
+  for (unsigned i = 0; i < NUM_DIGITS; i++)
     m_digitValues[i] = (i < values.size()) ? values[i] : 0;
   emit scheduleUpdate();
 }

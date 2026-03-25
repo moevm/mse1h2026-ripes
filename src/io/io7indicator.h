@@ -6,7 +6,6 @@
 #include "iobase.h"
 
 class QLabel;
-class QSpinBox;
 class QComboBox;
 class QHBoxLayout;
 
@@ -17,9 +16,11 @@ class SegmentDisplayWidget;
 class IO7Indicator : public IOBase {
   Q_OBJECT
 
-  enum Parameters { DIGITS, DIGIT_SIZE, COLOR };
+  enum Parameters { DIGIT_SIZE, COLOR };
 
 public:
+  static constexpr unsigned NUM_DIGITS = 4;
+
   explicit IO7Indicator(QWidget *parent);
   ~IO7Indicator() override { unregister(); }
 
@@ -40,7 +41,6 @@ protected:
   QSize minimumSizeHint() const override;
 
 private:
-  unsigned numDigits() const;
   void rebuildRegDescs();
   void drawDigit(QPainter &p, int x, int y, int w, int h, uint8_t segments);
   void initExtraSymbols();
@@ -56,7 +56,6 @@ private:
   bool m_updating = false;
 
   SegmentDisplayWidget *m_displayWidget = nullptr;
-  QSpinBox *m_spinDigits = nullptr;
   QComboBox *m_comboColor = nullptr;
   QHBoxLayout *m_hexBarLayout = nullptr;
   std::vector<QLabel *> m_regHexLabels;
