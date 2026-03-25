@@ -10,7 +10,7 @@
 #include <QVBoxLayout>
 
 namespace Ripes {
-
+// Stylesheets
 static const char *kStyleKey =
     "QPushButton {"
     "  background-color: #3a3a4a;"
@@ -22,38 +22,28 @@ static const char *kStyleKey =
     "QPushButton:hover   { background-color: #50506a; }"
     "QPushButton:pressed { background-color: #d4b0e8; color: #333; }";
 
-static const char *kStyleKeyActive =
-    "QPushButton {"
-    "  background-color: #d4b0e8;"
-    "  color: #333;"
-    "  border: 1px solid #b090c8;"
-    "  border-radius: 5px;"
-    "  font: bold 11px;"
-    "}";
+static const char *kStyleKeyActive = "QPushButton {"
+                                     "  background-color: #d4b0e8;"
+                                     "  color: #333;"
+                                     "  border: 1px solid #b090c8;"
+                                     "  border-radius: 5px;"
+                                     "  font: bold 11px;"
+                                     "}";
 
-static const char *kStyleBadge =
-    "QLabel {"
-    "  background-color: #3a3a5a;"
-    "  color: #eeeeee;"
-    "  border-radius: 3px;"
-    "  padding: 1px 5px;"
-    "  font: bold 11px;"
-    "}";
+static const char *kStyleBadge = "QLabel {"
+                                 "  background-color: #3a3a5a;"
+                                 "  color: #eeeeee;"
+                                 "  border-radius: 3px;"
+                                 "  padding: 1px 5px;"
+                                 "  font: bold 11px;"
+                                 "}";
 
-static const char *kStyleCaption =
-    "QLabel { color: #999; font: 10px; }";
+static const char *kStyleCaption = "QLabel { color: #999; font: 10px; }";
 
-static const char *kStyleFifoFull =
-    "QFrame { background-color: #4488cc; border-radius: 2px; }";
-
-static const char *kStyleFifoEmpty =
-    "QFrame { background-color: #555555; border-radius: 2px; }";
-
-static const char *kStylePanel =
-    "QWidget#keyboardPanel {"
-    "  background-color: #2a2a3a;"
-    "  border-radius: 8px;"
-    "}";
+static const char *kStylePanel = "QWidget#keyboardPanel {"
+                                 "  background-color: #2a2a3a;"
+                                 "  border-radius: 8px;"
+                                 "}";
 
 IOKeyboard::IOKeyboard(QWidget *parent) : IOBase(IOType::KEYBOARD, parent) {
   m_parameters[BUFSIZE] = IOParam(BUFSIZE, "Buffer size", 16, true, 1, 256);
@@ -92,7 +82,6 @@ QPushButton *IOKeyboard::createKey(const QString &label, uint8_t ascii,
 
 void IOKeyboard::updateLayout() {
   m_keys.clear();
-  m_fifoDots.clear();
   m_flashedBtn = nullptr;
   m_statusLabel = nullptr;
   m_lblData = nullptr;
@@ -108,34 +97,35 @@ void IOKeyboard::updateLayout() {
   root->setSpacing(4);
   root->setContentsMargins(10, 10, 10, 10);
 
+  // numbers
   {
     auto *r = addKeyRow(root);
     for (int i = 1; i <= 9; ++i)
-      r->addWidget(createKey(QString::number(i),
-                              static_cast<uint8_t>('0' + i)));
+      r->addWidget(
+          createKey(QString::number(i), static_cast<uint8_t>('0' + i)));
     r->addWidget(createKey("0", static_cast<uint8_t>('0')));
   }
 
-  struct RowDef { const char *keys; };
-  const RowDef rows[] = {
-    {"QWERTYUIOP"},
-    {"ASDFGHJKL"},
-    {"ZXCVBNM"}
+  // qwerty
+  struct RowDef {
+    const char *keys;
   };
+  const RowDef rows[] = {{"QWERTYUIOP"}, {"ASDFGHJKL"}, {"ZXCVBNM"}};
   for (const auto &rd : rows) {
     auto *r = addKeyRow(root);
     for (int i = 0; rd.keys[i]; ++i) {
       char ch = rd.keys[i];
-      r->addWidget(createKey(QString(QChar(ch)),
-                              static_cast<uint8_t>(ch)));
+      r->addWidget(createKey(QString(QChar(ch)), static_cast<uint8_t>(ch)));
     }
   }
 
+  // space
   {
     auto *r = addKeyRow(root);
     r->addWidget(createKey("SPACE", static_cast<uint8_t>(' '), 220, 36));
   }
 
+  // separator
   {
     auto *line = new QFrame(this);
     line->setFrameShape(QFrame::HLine);
@@ -143,6 +133,7 @@ void IOKeyboard::updateLayout() {
     root->addWidget(line);
   }
 
+  // status
   {
     auto *bar = new QHBoxLayout();
     bar->setSpacing(8);
@@ -155,34 +146,29 @@ void IOKeyboard::updateLayout() {
       bar->addWidget(cap);
       *valOut = new QLabel(init, this);
       (*valOut)->setStyleSheet(kStyleBadge);
-      (*valOut)->setMinimumWidth(36);
+      (*valOut)->setMinimumWidth(40);
       (*valOut)->setAlignment(Qt::AlignCenter);
       bar->addWidget(*valOut);
     };
 
     addField("STATUS", &m_statusLabel, "0");
-    addField("DATA",   &m_lblData,     "0x00");
-    addField("CHAR",   &m_lblChar,     " ");
+    addField("DATA", &m_lblData, "0x00");
+    addField("CHAR", &m_lblChar, " ");
 
     m_lblChar->setMinimumWidth(20);
 
     bar->addStretch(1);
 
+    const unsigned bufSize = m_parameters.at(BUFSIZE).value.toUInt();
+
     auto *fifoLabel = new QLabel("FIFO", this);
     fifoLabel->setStyleSheet(kStyleCaption);
     bar->addWidget(fifoLabel);
 
-    const unsigned bufSize = m_parameters.at(BUFSIZE).value.toUInt();
-    for (unsigned i = 0; i < bufSize; ++i) {
-      auto *dot = new QFrame(this);
-      dot->setFixedSize(12, 12);
-      dot->setStyleSheet(kStyleFifoEmpty);
-      bar->addWidget(dot);
-      m_fifoDots.append(dot);
-    }
-
     m_lblFifoCount = new QLabel(QString("0/%1").arg(bufSize), this);
-    m_lblFifoCount->setStyleSheet(kStyleCaption);
+    m_lblFifoCount->setStyleSheet(kStyleBadge);
+    m_lblFifoCount->setMinimumWidth(40);
+    m_lblFifoCount->setAlignment(Qt::AlignCenter);
     bar->addWidget(m_lblFifoCount);
 
     root->addLayout(bar);
@@ -201,6 +187,64 @@ void IOKeyboard::updateLayout() {
   emit regMapChanged();
 }
 
+void IOKeyboard::enqueueKey(uint8_t ascii) {
+  flashKey(ascii);
+
+  {
+    QMutexLocker lock(&m_bufMutex);
+    unsigned maxSize = m_parameters.at(BUFSIZE).value.toUInt();
+    if (static_cast<unsigned>(m_keyBuffer.size()) < maxSize)
+      m_keyBuffer.enqueue(ascii);
+    m_lastKey = ascii;
+  }
+
+  refreshStatusLabel();
+}
+
+void IOKeyboard::refreshStatusLabel() {
+  QMutexLocker lock(&m_bufMutex);
+  int count = m_keyBuffer.size();
+  uint8_t ch = m_lastKey;
+  lock.unlock();
+
+  if (m_statusLabel)
+    m_statusLabel->setText(QString::number(count));
+
+  if (m_lblData)
+    m_lblData->setText(QString("0x%1").arg(ch, 2, 16, QChar('0')));
+
+  if (m_lblChar) {
+    if (ch >= 0x20 && ch < 0x7F)
+      m_lblChar->setText(QString(QChar(ch)));
+    else
+      m_lblChar->setText(" ");
+  }
+
+  const unsigned bufSize = m_parameters.at(BUFSIZE).value.toUInt();
+  if (m_lblFifoCount)
+    m_lblFifoCount->setText(QString("%1/%2").arg(count).arg(bufSize));
+}
+
+QHBoxLayout *IOKeyboard::addKeyRow(QVBoxLayout *parent) {
+  auto *row = new QHBoxLayout();
+  row->setSpacing(4);
+  row->setAlignment(Qt::AlignCenter);
+  parent->addLayout(row);
+  return row;
+}
+
+QPushButton *IOKeyboard::createKey(const QString &label, uint8_t ascii, int w,
+                                   int h) {
+  auto *btn = new QPushButton(label, this);
+  btn->setFixedSize(w, h);
+  btn->setFocusPolicy(Qt::NoFocus);
+  btn->setStyleSheet(kStyleKey);
+  connect(btn, &QPushButton::clicked, this,
+          [this, ascii]() { enqueueKey(ascii); });
+  m_keys[ascii] = btn;
+  return btn;
+}
+
 void IOKeyboard::flashKey(uint8_t ascii) {
   clearFlash();
   auto it = m_keys.find(ascii);
@@ -215,53 +259,6 @@ void IOKeyboard::clearFlash() {
     m_flashedBtn->setStyleSheet(kStyleKey);
     m_flashedBtn = nullptr;
   }
-}
-
-void IOKeyboard::updateFifoDots(int used) {
-  for (int i = 0; i < m_fifoDots.size(); ++i)
-    m_fifoDots[i]->setStyleSheet(i < used ? kStyleFifoFull
-                                           : kStyleFifoEmpty);
-}
-
-void IOKeyboard::refreshStatusLabel() {
-  QMutexLocker lock(&m_bufMutex);
-  int count = m_keyBuffer.size();
-  uint8_t ch = m_lastKey;
-  lock.unlock();
-
-  if (m_statusLabel)
-    m_statusLabel->setText(QString::number(count));
-
-  if (m_lblData)
-    m_lblData->setText(
-        QString("0x%1").arg(ch, 2, 16, QChar('0')));
-
-  if (m_lblChar) {
-    if (ch >= 0x20 && ch < 0x7F)
-      m_lblChar->setText(QString(QChar(ch)));
-    else
-      m_lblChar->setText(" ");
-  }
-
-  updateFifoDots(count);
-
-  const unsigned bufSize = m_parameters.at(BUFSIZE).value.toUInt();
-  if (m_lblFifoCount)
-    m_lblFifoCount->setText(QString("%1/%2").arg(count).arg(bufSize));
-}
-
-void IOKeyboard::enqueueKey(uint8_t ascii) {
-  flashKey(ascii);
-
-  {
-    QMutexLocker lock(&m_bufMutex);
-    unsigned maxSize = m_parameters.at(BUFSIZE).value.toUInt();
-    if (static_cast<unsigned>(m_keyBuffer.size()) < maxSize)
-      m_keyBuffer.enqueue(ascii);
-    m_lastKey = ascii;
-  }
-
-  refreshStatusLabel();
 }
 
 void IOKeyboard::keyPressEvent(QKeyEvent *event) {
@@ -287,6 +284,8 @@ void IOKeyboard::keyPressEvent(QKeyEvent *event) {
     event->ignore();
   }
 }
+
+void IOKeyboard::parameterChanged(unsigned) { updateLayout(); }
 
 VInt IOKeyboard::ioRead(AInt offset, unsigned) {
   if (offset == 0) {
@@ -315,23 +314,12 @@ void IOKeyboard::ioWrite(AInt offset, VInt value, unsigned) {
 }
 
 void IOKeyboard::reset() {
-  {
-    QMutexLocker lock(&m_bufMutex);
-    m_keyBuffer.clear();
-    m_lastKey = 0;
-  }
+  QMutexLocker lock(&m_bufMutex);
+  m_keyBuffer.clear();
+  m_lastKey = 0;
+  lock.unlock();
   clearFlash();
   refreshStatusLabel();
 }
 
-void IOKeyboard::parameterChanged(unsigned) {
-  {
-    QMutexLocker lock(&m_bufMutex);
-    unsigned maxSize = m_parameters.at(BUFSIZE).value.toUInt();
-    while (static_cast<unsigned>(m_keyBuffer.size()) > maxSize)
-      m_keyBuffer.dequeue();
-  }
-  updateLayout();
-}
-
-}
+} // namespace Ripes
