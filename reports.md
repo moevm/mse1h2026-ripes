@@ -65,7 +65,7 @@ https://github.com/moevm/mse1h2026-ripes/blob/reports/presentations/%D0%B8%D1%82
 
 ### Скринкасты
 Скринкаст итерации 2
-https://disk.yandex.ru/i/ME3lrcJOnEWBBg
+https://disk.yandex.ru/i/h3Q4krJQ1ZGKHA
 
 Встреча 2 с заказчиком - https://disk.yandex.ru/i/LjbvsLWbwg3Hcg
 Встреча 3 с заказчиком - https://disk.yandex.ru/d/uTHsRxjMg8WN3A
@@ -93,7 +93,4 @@ https://disk.yandex.ru/i/ME3lrcJOnEWBBg
 2. Подготовить PR для слияния форка с оригинальным репозиторием по каждому из устройств
 
 
-
-
 (Исходные видеоматериалы не добавлены в репозиторий, так как их размер даже в сжатом состоянии более 100мб, ссылка на папку https://disk.yandex.ru/d/TldRZ9Nj4SmJZg, все видео были загружены до конца первой итерации https://github.com/moevm/mse1h2026-ripes/blob/reports/img/img.png)
-
