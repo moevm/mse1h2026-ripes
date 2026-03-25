@@ -5,13 +5,7 @@
 
 #include "iobase.h"
 
-class QLabel;
-class QComboBox;
-class QHBoxLayout;
-
 namespace Ripes {
-
-class SegmentDisplayWidget;
 
 class IO7Indicator : public IOBase {
   Q_OBJECT
@@ -21,44 +15,37 @@ class IO7Indicator : public IOBase {
 public:
   static constexpr unsigned NUM_DIGITS = 4;
 
-  explicit IO7Indicator(QWidget *parent);
-  ~IO7Indicator() override { unregister(); }
+  IO7Indicator(QWidget *parent);
+  ~IO7Indicator() { unregister(); };
 
-  unsigned byteSize() const override;
-  QString description() const override;
-  QString baseName() const override { return "Seven Segment"; }
+  virtual unsigned byteSize() const override;
+  virtual QString description() const override;
+  virtual QString baseName() const override { return "Seven Segment"; }
 
-  const std::vector<RegDesc> &registers() const override { return m_regDescs; }
-  const std::vector<IOSymbol> *extraSymbols() const override;
+  virtual const std::vector<RegDesc> &registers() const override {
+    return m_regDescs;
+  };
+  virtual const std::vector<IOSymbol> *extraSymbols() const override {
+    return &m_extraSymbols;
+  }
 
-  VInt ioRead(AInt offset, unsigned size) override;
-  void ioWrite(AInt offset, VInt value, unsigned size) override;
-  void reset() override;
+  virtual VInt ioRead(AInt offset, unsigned size) override;
+  virtual void ioWrite(AInt offset, VInt value, unsigned size) override;
+  virtual void reset() override;
 
 protected:
+  virtual void parameterChanged(unsigned) override;
+
   void paintEvent(QPaintEvent *event) override;
-  void parameterChanged(unsigned ID) override;
   QSize minimumSizeHint() const override;
 
 private:
-  void rebuildRegDescs();
+  void updateRegDescs();
   void drawDigit(QPainter &p, int x, int y, int w, int h, uint8_t segments);
-  void initExtraSymbols();
-
-  void buildUI();
-  void refreshDisplay();
-  void rebuildHexLabels();
-  void updateRegLabels();
-  void applyQuickTest(const std::vector<uint8_t> &values);
 
   std::vector<uint8_t> m_digitValues;
   std::vector<RegDesc> m_regDescs;
-  bool m_updating = false;
-
-  SegmentDisplayWidget *m_displayWidget = nullptr;
-  QComboBox *m_comboColor = nullptr;
-  QHBoxLayout *m_hexBarLayout = nullptr;
-  std::vector<QLabel *> m_regHexLabels;
+  std::vector<IOSymbol> m_extraSymbols;
 };
 
 } // namespace Ripes
