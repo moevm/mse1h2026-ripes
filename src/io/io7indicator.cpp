@@ -171,36 +171,16 @@ private:
 
     p.setPen(Qt::NoPen);
 
-    for (int i = 0; i < 7; i++) {
-      if (!((seg >> i) & 1))
-        continue;
-      QColor gc = c.glow;
-      gc.setAlpha(35);
-      p.setBrush(gc);
-      QPointF cen;
-      for (const auto &pt : polys[i])
-        cen += pt;
-      cen /= polys[i].size();
-      QPolygonF gp;
-      for (const auto &pt : polys[i])
-        gp << cen + (pt - cen) * 1.5;
-      p.drawPolygon(gp);
-    }
-
+    // Только сами сегменты — без glow
     for (int i = 0; i < 7; i++) {
       p.setBrush((seg >> i) & 1 ? c.on : c.off);
       p.drawPolygon(polys[i]);
     }
 
+    // Десятичная точка — тоже без glow
     const qreal dpR = t * 0.55;
     const QPointF dpC(x + w + t * 0.4, by);
     const bool dpOn = (seg >> 7) & 1;
-    if (dpOn) {
-      QColor gc = c.glow;
-      gc.setAlpha(35);
-      p.setBrush(gc);
-      p.drawEllipse(dpC, dpR * 1.8, dpR * 1.8);
-    }
     p.setBrush(dpOn ? c.on : c.off);
     p.drawEllipse(dpC, dpR, dpR);
   }
