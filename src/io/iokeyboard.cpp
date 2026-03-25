@@ -225,26 +225,6 @@ void IOKeyboard::refreshStatusLabel() {
     m_lblFifoCount->setText(QString("%1/%2").arg(count).arg(bufSize));
 }
 
-QHBoxLayout *IOKeyboard::addKeyRow(QVBoxLayout *parent) {
-  auto *row = new QHBoxLayout();
-  row->setSpacing(4);
-  row->setAlignment(Qt::AlignCenter);
-  parent->addLayout(row);
-  return row;
-}
-
-QPushButton *IOKeyboard::createKey(const QString &label, uint8_t ascii, int w,
-                                   int h) {
-  auto *btn = new QPushButton(label, this);
-  btn->setFixedSize(w, h);
-  btn->setFocusPolicy(Qt::NoFocus);
-  btn->setStyleSheet(kStyleKey);
-  connect(btn, &QPushButton::clicked, this,
-          [this, ascii]() { enqueueKey(ascii); });
-  m_keys[ascii] = btn;
-  return btn;
-}
-
 void IOKeyboard::flashKey(uint8_t ascii) {
   clearFlash();
   auto it = m_keys.find(ascii);
