@@ -1,0 +1,1 @@
+#define RIPES_GIT_VERSION "v2.2.6-131-gd3d0c12"
