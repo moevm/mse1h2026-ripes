@@ -15,5 +15,8 @@
         <file>ELF/RanPi-RV32</file>
         <file>ELF/RanPi-RV64</file>
         <file>assembly/consoleReading.s</file>
+        <file>assembly/sevenSegKeyboard.s</file>
+        <file>assembly/keyboardDualDisplay.s</file>
+        <file>assembly/mouseDrawing.s</file>
     </qresource>
 </RCC>
