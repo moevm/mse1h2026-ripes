@@ -34,6 +34,8 @@ public:
   enum Column { Name, Value, NColumns };
   PeriphParamModel(QPointer<IOBase> peripheral, QObject *parent = nullptr);
 
+  void setRunning(bool running);
+
   int rowCount(const QModelIndex &parent = QModelIndex()) const override;
   int columnCount(const QModelIndex &parent = QModelIndex()) const override;
 
@@ -48,5 +50,6 @@ public:
 
 private:
   QPointer<IOBase> m_peripheral = nullptr;
+  bool m_running = false;
 };
 } // namespace Ripes

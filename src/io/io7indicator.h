@@ -10,10 +10,12 @@ namespace Ripes {
 class IO7Indicator : public IOBase {
   Q_OBJECT
 
-  enum Parameters { DIGIT_SIZE, COLOR };
+  enum Parameters { NUM_DIGITS = 0, COLOR = 1 };
 
 public:
-  static constexpr unsigned NUM_DIGITS = 4;
+  static constexpr unsigned DEFAULT_NUM_DIGITS = 4;
+  static constexpr unsigned MIN_NUM_DIGITS = 1;
+  static constexpr unsigned MAX_NUM_DIGITS = 16;
 
   IO7Indicator(QWidget *parent);
   ~IO7Indicator() { unregister(); };
@@ -41,6 +43,7 @@ protected:
 
 private:
   void updateRegDescs();
+  unsigned numDigits() const;
   void drawDigit(QPainter &p, int x, int y, int w, int h, uint8_t segments);
 
   std::vector<uint8_t> m_digitValues;

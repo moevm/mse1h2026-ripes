@@ -40,7 +40,24 @@ void PeriphParamDelegate::setModelData(QWidget *e, QAbstractItemModel *model,
 }
 
 PeriphParamModel::PeriphParamModel(QPointer<IOBase> peripheral, QObject *parent)
-    : QAbstractTableModel(parent), m_peripheral(peripheral) {}
+    : QAbstractTableModel(parent), m_peripheral(peripheral) {
+  m_running = ProcessorHandler::isRunning();
+  connect(ProcessorHandler::get(), &ProcessorHandler::runStarted, this,
+          [this] { setRunning(true); });
+  connect(ProcessorHandler::get(), &ProcessorHandler::runFinished, this,
+          [this] { setRunning(false); });
+}
+
+void PeriphParamModel::setRunning(bool running) {
+  if (m_running == running)
+    return;
+  m_running = running;
+  const int rows = rowCount();
+  if (rows > 0) {
+    emit dataChanged(index(0, Value), index(rows - 1, Value),
+                     {Qt::DisplayRole});
+  }
+}
 
 int PeriphParamModel::columnCount(const QModelIndex &) const {
   return NColumns;
@@ -119,7 +136,7 @@ Qt::ItemFlags PeriphParamModel::flags(const QModelIndex &index) const {
   const unsigned col = index.column();
   Qt::ItemFlags flags = Qt::ItemIsEnabled;
 
-  if (col == Value) {
+  if (col == Value && !m_running) {
     flags |= Qt::ItemIsEditable;
   }
 

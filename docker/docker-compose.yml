@@ -11,7 +11,30 @@ services:
       - "6080:80"      # noVNC web interface
       - "5900:5900"    # VNC direct connection
     volumes:
-      - ./projects:/home/developer/projects 
+      - ./projects:/home/developer/projects
+      - "${RISCV_TOOLCHAIN_DIR:-./toolchain}:/home/developer/toolchain:ro"
     restart: unless-stopped
     stdin_open: true
     tty: true
+
+  ripes-web:
+    build:
+      context: .
+      dockerfile: ripes_wasm.dockerfile
+      args:
+        BRANCH: master
+    image: ripes-web:latest
+    container_name: ripes-web
+    ports:
+      - "8080:80"      # http://localhost:8080 -> Ripes.html (Qt for WebAssembly)
+    restart: unless-stopped
+    # The container only serves static .html/.js/.wasm via nginx; the actual
+    # simulator runs in each student's browser. These limits are conservative
+    # caps for the static-file server itself, not per-user quotas.
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 256M
+    mem_limit: 256m
+    cpus: 1.0

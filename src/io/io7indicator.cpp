@@ -23,8 +23,8 @@ static const SegColor s_segColors[] = {
 
 static constexpr int s_numColors =
     static_cast<int>(sizeof(s_segColors) / sizeof(s_segColors[0]));
-static constexpr qreal s_digitAspect = 0.62;
-static constexpr qreal s_gapRatio = 0.14;
+static constexpr qreal s_digitAspect = 0.56;
+static constexpr qreal s_gapRatio   = 0.12;
 
 QPolygonF horizontalSegment(const QRectF &rect) {
   const qreal bevel = qMin(rect.height() * 0.8, rect.width() / 3.0);
@@ -60,19 +60,24 @@ IO7Indicator::IO7Indicator(QWidget *parent)
     : IOBase(IOType::SEVEN_SEGMENT, parent) {
   setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
 
-  m_parameters[DIGIT_SIZE] =
-      IOParam(DIGIT_SIZE, "Digit size", 64, true, 30, 120);
+  m_parameters[NUM_DIGITS] =
+      IOParam(NUM_DIGITS, "# Digits", DEFAULT_NUM_DIGITS, true,
+              MIN_NUM_DIGITS, MAX_NUM_DIGITS);
   m_parameters[COLOR] =
       IOParam(COLOR, "Color", 0, true, 0, s_numColors - 1);
 
-  m_digitValues.assign(NUM_DIGITS, 0);
+  m_digitValues.assign(DEFAULT_NUM_DIGITS, 0);
   setMinimumSize(minimumSizeHint());
   updateRegDescs();
 }
 
+unsigned IO7Indicator::numDigits() const {
+  return static_cast<unsigned>(m_parameters.at(NUM_DIGITS).value.toInt());
+}
+
 QString IO7Indicator::description() const {
   QStringList desc;
-  desc << "7-segment display with " + QString::number(NUM_DIGITS) +
+  desc << "7-segment display with " + QString::number(numDigits()) +
               " digits.";
   desc << "Each digit is a 4-byte word (offset = index * 4).";
   desc << "Bits 0-6 = segments a-g, bit 7 = decimal point.";
@@ -80,25 +85,30 @@ QString IO7Indicator::description() const {
 }
 
 unsigned IO7Indicator::byteSize() const {
-  return NUM_DIGITS * 4;
+  return numDigits() * 4;
 }
 
 void IO7Indicator::updateRegDescs() {
+  const unsigned n = numDigits();
+  m_digitValues.resize(n, 0);
+
   m_regDescs.clear();
-  for (unsigned i = 0; i < NUM_DIGITS; ++i) {
+  for (unsigned i = 0; i < n; ++i) {
     m_regDescs.push_back(
         RegDesc{QString("Digit %1").arg(i), RegDesc::RW::RW, 8,
                 static_cast<AInt>(i * 4), true});
   }
 
   m_extraSymbols.clear();
-  m_extraSymbols.push_back(IOSymbol{"N_DIGITS", NUM_DIGITS});
+  m_extraSymbols.push_back(IOSymbol{"N_DIGITS", n});
 
   updateGeometry();
   emit regMapChanged();
 }
 
-void IO7Indicator::parameterChanged(unsigned) {
+void IO7Indicator::parameterChanged(unsigned ID) {
+  if (ID == NUM_DIGITS)
+    updateRegDescs();
   setMinimumSize(minimumSizeHint());
   updateGeometry();
   update();
@@ -133,14 +143,12 @@ void IO7Indicator::reset() {
 }
 
 QSize IO7Indicator::minimumSizeHint() const {
-  const int digitH = m_parameters.at(DIGIT_SIZE).value.toInt();
-  const int digitW = qRound(digitH * s_digitAspect);
-  const int gap = qMax(4, digitH / 7);
-  const int margin = qMax(8, digitH / 6);
-  const int n = static_cast<int>(NUM_DIGITS);
-
-  return QSize(n * digitW + (n - 1) * gap + margin * 2,
-               digitH + margin * 2);
+  static constexpr int minH = 64;
+  const int n      = static_cast<int>(numDigits());
+  const int digitW = qRound(minH * s_digitAspect);
+  const int gap    = qMax(4, qRound(minH * s_gapRatio));
+  const int margin = 12;
+  return QSize(n * digitW + (n - 1) * gap + margin * 2, minH + margin * 2);
 }
 
 void IO7Indicator::drawDigit(QPainter &p, int x, int y, int w, int h,
@@ -150,56 +158,78 @@ void IO7Indicator::drawDigit(QPainter &p, int x, int y, int w, int h,
 
   const int ci =
       qBound(0, m_parameters.at(COLOR).value.toInt(), s_numColors - 1);
-  const QColor &on = s_segColors[ci].on;
+  const QColor &on  = s_segColors[ci].on;
   const QColor &off = s_segColors[ci].off;
 
-  const qreal thickness = qMax<qreal>(2.0, qMin(w, h) * 0.09);
-  const qreal xPad = thickness * 0.75;
-  const qreal yPad = thickness * 0.45;
-  const qreal midY = y + h / 2.0;
+  // Classic 7-seg proportions: slimmer segments with tiny inter-seg gap
+  const qreal T  = h * 0.075;
+  const qreal G  = T * 0.25;                       // gap between segments
+  const qreal vH = (h - 3.0 * T - 4.0 * G) / 2.0; // vertical seg length
 
-  const qreal topY = y + yPad;
-  const qreal bottomY = y + h - yPad - thickness;
-  const qreal horizLeft = x + xPad + thickness * 0.2;
-  const qreal horizRight = x + w - xPad - thickness * 0.2;
-  const qreal horizWidth = qMax<qreal>(1.0, horizRight - horizLeft);
+  // Horizontal columns
+  const qreal lx  = x;                  // left vert x
+  const qreal rx  = x + w - T;          // right vert x
+  const qreal x0  = lx + T + G;         // horiz seg left
+  const qreal x1  = rx - G;             // horiz seg right
+  const qreal hw  = x1 - x0;            // horiz seg width
 
-  const qreal leftX = x + xPad;
-  const qreal rightX = x + w - xPad - thickness;
+  // Row tops (A=0, F/B=1, G=2, E/C=3, D=4)
+  const qreal yA = y;
+  const qreal yF = yA + T + G;
+  const qreal yG = yF + vH + G;
+  const qreal yE = yG + T + G;
+  const qreal yD = yE + vH + G;
 
-  const qreal upperTop = topY + thickness * 0.7;
-  const qreal upperBottom = midY - thickness * 0.7;
-  const qreal lowerTop = midY + thickness * 0.2;
-  const qreal lowerBottom = bottomY - thickness * 0.2;
+  // Upright digits (no italic shear)
+  auto lean = [&](qreal px, qreal py) -> QPointF {
+    return {px, py};
+  };
 
-  const qreal upperHeight = qMax<qreal>(1.0, upperBottom - upperTop);
-  const qreal lowerHeight = qMax<qreal>(1.0, lowerBottom - lowerTop);
+  auto hPoly = [&](qreal sx, qreal sy, qreal sw, qreal st) {
+    const qreal bev = qMin(st * 0.85, sw / 5.0);
+    const qreal cy  = sy + st / 2.0;
+    QPolygonF poly;
+    poly << lean(sx + bev,      sy)
+         << lean(sx + sw - bev, sy)
+         << lean(sx + sw,       cy)
+         << lean(sx + sw - bev, sy + st)
+         << lean(sx + bev,      sy + st)
+         << lean(sx,            cy);
+    return poly;
+  };
 
-  const QRectF segments[7] = {
-      QRectF(horizLeft, topY, horizWidth, thickness),
-      QRectF(rightX, upperTop, thickness, upperHeight),
-      QRectF(rightX, lowerTop, thickness, lowerHeight),
-      QRectF(horizLeft, bottomY, horizWidth, thickness),
-      QRectF(leftX, lowerTop, thickness, lowerHeight),
-      QRectF(leftX, upperTop, thickness, upperHeight),
-      QRectF(horizLeft, midY - thickness / 2.0, horizWidth, thickness),
+  auto vPoly = [&](qreal sx, qreal sy, qreal sw, qreal sh) {
+    const qreal bev = qMin(sw * 0.85, sh / 5.0);
+    const qreal cx  = sx + sw / 2.0;
+    QPolygonF poly;
+    poly << lean(sx,       sy + bev)
+         << lean(cx,       sy)
+         << lean(sx + sw,  sy + bev)
+         << lean(sx + sw,  sy + sh - bev)
+         << lean(cx,       sy + sh)
+         << lean(sx,       sy + sh - bev);
+    return poly;
   };
 
   p.setPen(Qt::NoPen);
 
-  for (int i = 0; i < 7; ++i) {
-    p.setBrush((seg >> i) & 1 ? on : off);
-    if (i == 0 || i == 3 || i == 6)
-      p.drawPolygon(horizontalSegment(segments[i]));
-    else
-      p.drawPolygon(verticalSegment(segments[i]));
-  }
+  auto draw = [&](bool isOn, QPolygonF poly) {
+    p.setBrush(isOn ? on : off);
+    p.drawPolygon(poly);
+  };
 
-  const qreal dotRadius = thickness * 0.34;
-  const QPointF dotCenter(x + w - dotRadius * 1.8, y + h - dotRadius * 1.8);
+  draw(seg & 0x01, hPoly(x0, yA, hw, T)); // A – top
+  draw(seg & 0x02, vPoly(rx, yF, T, vH)); // B – upper-right
+  draw(seg & 0x04, vPoly(rx, yE, T, vH)); // C – lower-right
+  draw(seg & 0x08, hPoly(x0, yD, hw, T)); // D – bottom
+  draw(seg & 0x10, vPoly(lx, yE, T, vH)); // E – lower-left
+  draw(seg & 0x20, vPoly(lx, yF, T, vH)); // F – upper-left
+  draw(seg & 0x40, hPoly(x0, yG, hw, T)); // G – middle
 
-  p.setBrush((seg >> 7) & 1 ? on : off);
-  p.drawEllipse(dotCenter, dotRadius, dotRadius);
+  const qreal dotR = T * 0.38;
+  const QPointF dotC = lean(rx + T - dotR * 1.2, yD + T - dotR * 1.2);
+  p.setBrush((seg & 0x80) ? on : off);
+  p.drawEllipse(dotC, dotR, dotR);
 }
 
 void IO7Indicator::paintEvent(QPaintEvent *) {
