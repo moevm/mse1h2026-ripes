@@ -8,9 +8,8 @@
 using namespace Ripes;
 
 namespace {
-template <typename T>
-T *makePeripheral() {
-  auto *p = new T(nullptr);
+IOKeyboard *makeKeyboard() {
+  auto *p = new IOKeyboard(nullptr);
   QObject::connect(p, &IOBase::aboutToDelete, p,
                    [](std::atomic<bool> &ok) { ok = 1; });
   return p;
@@ -28,7 +27,7 @@ private slots:
   //   - after the buffer is drained, KEY_DATA returns 0
   //   - unmapped keys (e.g. F1) are not enqueued
   void keyboard_keyPressEnqueuesAndStatusReflectsBuffer() {
-    auto *kb = makePeripheral<IOKeyboard>();
+    auto *kb = makeKeyboard();
     constexpr AInt KEY_DATA = 0;
     constexpr AInt KEY_STATUS = 4;
 
@@ -58,7 +57,7 @@ private slots:
   //   - a non-zero write to KEY_STATUS flushes the FIFO
   //   - reset() also flushes the FIFO
   void keyboard_writeStatusClearsBuffer() {
-    auto *kb = makePeripheral<IOKeyboard>();
+    auto *kb = makeKeyboard();
     constexpr AInt KEY_STATUS = 4;
 
     QKeyEvent ev(QEvent::KeyPress, Qt::Key_Q, Qt::NoModifier);
@@ -80,7 +79,7 @@ private slots:
   //   - excess events beyond the configured capacity are silently dropped
   //   - KEY_STATUS never exceeds BUFSIZE regardless of how many events arrive
   void keyboard_bufferOverflowIsBounded() {
-    auto *kb = makePeripheral<IOKeyboard>();
+    auto *kb = makeKeyboard();
     constexpr AInt KEY_STATUS = 4;
     kb->setParameter(0, 4);
 
