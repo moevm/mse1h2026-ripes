@@ -4,6 +4,9 @@
 
 #include "iobase.h"
 
+class QSpinBox;
+class QPushButton;
+
 namespace Ripes {
 
 class IOMouse : public IOBase {
@@ -41,6 +44,7 @@ protected:
   void mouseReleaseEvent(QMouseEvent *event) override;
   void wheelEvent(QWheelEvent *event) override;
   QSize minimumSizeHint() const override;
+  QSize sizeHint() const override;
 
 private:
   void updateExtraSymbols();
@@ -49,6 +53,7 @@ private:
   int m_mouseY = 0;
   int m_lButton = 0;
   int m_rButton = 0;
+  int m_mButton = 0;
   int m_scroll = 0;
 
   std::vector<RegDesc> m_regDescs;

@@ -4,10 +4,13 @@
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPen>
+#include <QPushButton>
+#include <QSpinBox>
 #include <QWheelEvent>
 
 namespace Ripes {
 
+//  Constructor
 IOMouse::IOMouse(QWidget *parent) : IOBase(IOType::MOUSE, parent) {
   m_parameters[WIDTH] = IOParam(WIDTH, "Width", 200, true, 100, 800);
   m_parameters[HEIGHT] = IOParam(HEIGHT, "Height", 150, true, 100, 600);
@@ -40,12 +43,17 @@ void IOMouse::parameterChanged(unsigned) {
   update();
 }
 
-void IOMouse::reset() {
-  m_mouseX = 0;
-  m_mouseY = 0;
-  m_lButton = 0;
-  m_rButton = 0;
-  m_scroll = 0;
+    setFixedSize(totalW, totalH);
+    repositionWidgets();
+    update();
+
+    for (QWidget *w = parentWidget(); w; w = w->parentWidget()) {
+        if (w->isWindow()) break;
+        if (w->layout()) {
+            w->layout()->update();
+        }
+        w->adjustSize();
+    }
 }
 
 QString IOMouse::description() const {
@@ -58,27 +66,28 @@ QString IOMouse::description() const {
 }
 
 VInt IOMouse::ioRead(AInt offset, unsigned) {
-  switch (offset) {
-  case X * 4:
-    return m_mouseX;
-  case Y * 4:
-    return m_mouseY;
-  case LBUTTON * 4:
-    return m_lButton;
-  case RBUTTON * 4:
-    return m_rButton;
-  case SCROLL * 4:
-    return m_scroll;
-  }
-  return 0;
+    switch (offset) {
+    case X * 4:
+        return m_mouseX;
+    case Y * 4:
+        return m_mouseY;
+    case LBUTTON * 4:
+        return m_lButton;
+    case RBUTTON * 4:
+        return m_rButton;
+    case SCROLL * 4:
+        return m_scroll;
+    }
+    return 0;
 }
 
 void IOMouse::ioWrite(AInt offset, VInt value, unsigned) {
-  if (offset == SCROLL * 4) {
-    m_scroll = value;
-  }
+    if (offset == SCROLL * 4) {
+        m_scroll = value;
+    }
 }
 
+//  Input events
 void IOMouse::mouseMoveEvent(QMouseEvent *event) {
   const int w = m_parameters.at(WIDTH).value.toInt();
   const int h = m_parameters.at(HEIGHT).value.toInt();
@@ -88,19 +97,23 @@ void IOMouse::mouseMoveEvent(QMouseEvent *event) {
 }
 
 void IOMouse::mousePressEvent(QMouseEvent *event) {
-  if (event->button() == Qt::LeftButton)
-    m_lButton = 1;
-  if (event->button() == Qt::RightButton)
-    m_rButton = 1;
-  emit scheduleUpdate();
+    if (event->button() == Qt::LeftButton)
+        m_lButton = 1;
+    if (event->button() == Qt::MiddleButton)
+        m_mButton = 1;
+    if (event->button() == Qt::RightButton)
+        m_rButton = 1;
+    emit scheduleUpdate();
 }
 
 void IOMouse::mouseReleaseEvent(QMouseEvent *event) {
-  if (event->button() == Qt::LeftButton)
-    m_lButton = 0;
-  if (event->button() == Qt::RightButton)
-    m_rButton = 0;
-  emit scheduleUpdate();
+    if (event->button() == Qt::LeftButton)
+        m_lButton = 0;
+    if (event->button() == Qt::MiddleButton)
+        m_mButton = 0;
+    if (event->button() == Qt::RightButton)
+        m_rButton = 0;
+    emit scheduleUpdate();
 }
 
 void IOMouse::wheelEvent(QWheelEvent *event) {
@@ -114,6 +127,7 @@ QSize IOMouse::minimumSizeHint() const {
   return QSize(w, h);
 }
 
+//  Paint
 void IOMouse::paintEvent(QPaintEvent *) {
   QPainter painter(this);
   painter.setRenderHint(QPainter::Antialiasing);
