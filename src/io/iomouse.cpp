@@ -9,21 +9,36 @@
 namespace Ripes {
 
 IOMouse::IOMouse(QWidget *parent) : IOBase(IOType::MOUSE, parent) {
+  m_parameters[WIDTH] = IOParam(WIDTH, "Width", 200, true, 100, 800);
+  m_parameters[HEIGHT] = IOParam(HEIGHT, "Height", 150, true, 100, 600);
+
   m_regDescs.push_back(RegDesc{"X", RegDesc::RW::R, 32, X * 4, true});
   m_regDescs.push_back(RegDesc{"Y", RegDesc::RW::R, 32, Y * 4, true});
   m_regDescs.push_back(
       RegDesc{"LBUTTON", RegDesc::RW::R, 1, LBUTTON * 4, true});
   m_regDescs.push_back(
       RegDesc{"RBUTTON", RegDesc::RW::R, 1, RBUTTON * 4, true});
-  m_regDescs.push_back(RegDesc{"SCROLL", RegDesc::RW::RW, 32, SCROLL * 4, true});
+  m_regDescs.push_back(
+      RegDesc{"SCROLL", RegDesc::RW::RW, 32, SCROLL * 4, true});
 
-  m_extraSymbols.push_back(IOSymbol{"WIDTH", m_width});
-  m_extraSymbols.push_back(IOSymbol{"HEIGHT", m_height});
-
+  updateExtraSymbols();
   setMouseTracking(true);
   setFocusPolicy(Qt::StrongFocus);
 }
 
+void IOMouse::updateExtraSymbols() {
+  const unsigned w = m_parameters.at(WIDTH).value.toUInt();
+  const unsigned h = m_parameters.at(HEIGHT).value.toUInt();
+  m_extraSymbols.clear();
+  m_extraSymbols.push_back(IOSymbol{"WIDTH", w});
+  m_extraSymbols.push_back(IOSymbol{"HEIGHT", h});
+}
+
+void IOMouse::parameterChanged(unsigned) {
+  updateExtraSymbols();
+  updateGeometry();
+  update();
+}
 
 void IOMouse::reset() {
   m_mouseX = 0;
@@ -33,9 +48,13 @@ void IOMouse::reset() {
   m_scroll = 0;
 }
 
-
 QString IOMouse::description() const {
-  return "Mouse: X, Y, LBUTTON, RBUTTON, SCROLL";
+  QStringList desc;
+  desc << "Tracks mouse position, button state, and scroll within the "
+          "widget area.";
+  desc << "X, Y = coordinates; LBUTTON, RBUTTON = press state (0/1); "
+          "SCROLL = cumulative scroll delta.";
+  return desc.join('\n');
 }
 
 VInt IOMouse::ioRead(AInt offset, unsigned) {
@@ -61,16 +80,10 @@ void IOMouse::ioWrite(AInt offset, VInt value, unsigned) {
 }
 
 void IOMouse::mouseMoveEvent(QMouseEvent *event) {
-  m_mouseX = event->pos().x();
-  m_mouseY = event->pos().y();
-  if (m_mouseX < 0)
-    m_mouseX = 0;
-  if (m_mouseY < 0)
-    m_mouseY = 0;
-  if (m_mouseX >= (int)m_width)
-    m_mouseX = m_width - 1;
-  if (m_mouseY >= (int)m_height)
-    m_mouseY = m_height - 1;
+  const int w = m_parameters.at(WIDTH).value.toInt();
+  const int h = m_parameters.at(HEIGHT).value.toInt();
+  m_mouseX = qBound(0, event->pos().x(), w - 1);
+  m_mouseY = qBound(0, event->pos().y(), h - 1);
   emit scheduleUpdate();
 }
 
@@ -96,56 +109,48 @@ void IOMouse::wheelEvent(QWheelEvent *event) {
 }
 
 QSize IOMouse::minimumSizeHint() const {
-  return QSize(m_width, m_height);
+  const int w = m_parameters.at(WIDTH).value.toInt();
+  const int h = m_parameters.at(HEIGHT).value.toInt();
+  return QSize(w, h);
 }
 
 void IOMouse::paintEvent(QPaintEvent *) {
-  QPainter p(this);
-  p.setRenderHint(QPainter::Antialiasing);
+  QPainter painter(this);
+  painter.setRenderHint(QPainter::Antialiasing);
 
-  p.fillRect(rect(), QColor(245, 245, 245));
+  const int w = m_parameters.at(WIDTH).value.toInt();
+  const int h = m_parameters.at(HEIGHT).value.toInt();
 
-  QPen gridPen(QColor(200, 200, 200));
-  gridPen.setWidth(1);
-  p.setPen(gridPen);
-  for (int x = 0; x < (int)m_width; x += m_width / 4)
-    p.drawLine(x, 0, x, m_height);
-  for (int y = 0; y < (int)m_height; y += m_height / 4)
-    p.drawLine(0, y, m_width, y);
+  // Background
+  painter.fillRect(rect(), QColor(240, 240, 240));
+  painter.fillRect(0, 0, w, h, Qt::white);
 
-  QPen crossPen(QColor(0, 180, 180));
-  crossPen.setWidth(1);
-  p.setPen(crossPen);
-  p.drawLine(0, m_mouseY, m_width, m_mouseY);
-  p.drawLine(m_mouseX, 0, m_mouseX, m_height);
+  // Border
+  painter.setPen(QPen(Qt::black, 1));
+  painter.drawRect(0, 0, w - 1, h - 1);
 
-  p.setBrush(QColor(0, 180, 180));
-  p.setPen(QPen(QColor(255, 255, 255), 2));
-  p.drawEllipse(QPoint(m_mouseX, m_mouseY), 5, 5);
+  // Crosshair guides
+  painter.setPen(QPen(Qt::gray, 1, Qt::DashLine));
+  painter.drawLine(m_mouseX, 0, m_mouseX, h);
+  painter.drawLine(0, m_mouseY, w, m_mouseY);
 
-  QString label = "(" + QString::number(m_mouseX) + ", " + QString::number(m_mouseY) + ")";
-  QFont font = p.font();
-  font.setFamily("Consolas");
-  font.setPointSize(10);
-  p.setFont(font);
-  p.setPen(QColor(0, 180, 180));
+  // Cursor dot (color indicates button state)
+  painter.setPen(Qt::NoPen);
+  QColor dotColor = Qt::black;
+  if (m_lButton)
+    dotColor = Qt::red;
+  else if (m_rButton)
+    dotColor = Qt::blue;
+  painter.setBrush(dotColor);
+  painter.drawEllipse(QPoint(m_mouseX, m_mouseY), 4, 4);
 
-  int textX = m_mouseX + 10;
-  int textY = m_mouseY - 8;
-  QFontMetrics fm(font);
-  int textW = fm.horizontalAdvance(label);
-  if (textX + textW > (int)m_width)
-    textX = m_mouseX - textW - 10;
-  if (textY - fm.height() < 0)
-    textY = m_mouseY + fm.height() + 4;
+  // Coordinate info
+  painter.setPen(Qt::black);
+  QString info =
+      QString("(%1, %2) SCR:%3").arg(m_mouseX).arg(m_mouseY).arg(m_scroll);
+  painter.drawText(4, h - 4, info);
 
-  p.drawText(textX, textY, label);
-
-  p.setPen(QPen(QColor(180, 180, 180), 1));
-  p.setBrush(Qt::NoBrush);
-  p.drawRect(0, 0, m_width - 1, m_height - 1);
-
-  p.end();
+  painter.end();
 }
 
 } // namespace Ripes
