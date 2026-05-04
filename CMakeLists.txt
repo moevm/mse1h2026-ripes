@@ -104,6 +104,7 @@ add_subdirectory(src)
 
 option(RIPES_BUILD_TESTS "Build Ripes tests" OFF)
 if(RIPES_BUILD_TESTS)
+    enable_testing()
     add_subdirectory(test)
 endif()
 
