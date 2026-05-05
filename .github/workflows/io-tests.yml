@@ -50,9 +50,9 @@ jobs:
             -DVSRTL_BUILD_TESTS=OFF
 
       - name: Build
-        run: cmake --build build --target tst_io_keyboard tst_io_mouse tst_io_7indicator
+        run: cmake --build build --target tst_io_keyboard tst_io_mouse tst_io_7indicator tst_io_integration
 
       - name: Test
         working-directory: build
         run: |
-          xvfb-run -a ctest --output-on-failure -R '^tst_io_(keyboard|mouse|7indicator)$'
+          xvfb-run -a ctest --output-on-failure -R '^tst_io_(keyboard|mouse|7indicator|integration)$'
