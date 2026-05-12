@@ -32,6 +32,6 @@ services:
       resources:
         limits:
           cpus: "1.0"
-          memory: 256M
-    mem_limit: 256m
+          memory: 512M
+    mem_limit: 512m
     cpus: 1.0
