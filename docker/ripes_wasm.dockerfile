@@ -1,19 +1,12 @@
 # syntax=docker/dockerfile:1.6
 #
-# WASM build of Ripes that mirrors the upstream wasm-release.yml workflow:
-#   - Qt 6.6.0 (host gcc_64 + wasm_multithread, with qtcharts)
-#   - emsdk 3.1.25
-#   - plain cmake with the Qt toolchain file, EMSCRIPTEN=1,
-#     EMSCRIPTEN_FORCE_COMPILERS=ON, RIPES_WITH_QPROCESS=OFF
-#   - artifacts: Ripes.html / Ripes.js / Ripes.wasm / Ripes.worker.js / qtloader.js
-#
-# The multithread WASM build requires SharedArrayBuffer, so nginx must serve
-# the page with cross-origin isolation headers (COOP + COEP).
+# WASM build of Ripes (Qt 6.6.0 wasm_multithread + emsdk 3.1.37).
 
 ARG QT_VERSION=6.6.0
-ARG EMSDK_VERSION=3.1.25
+# emsdk version MUST match the one Qt-for-WASM was built with.
+# Qt 6.6.x -> emsdk 3.1.37, Qt 6.5.x -> 3.1.25, Qt 6.7.x -> 3.1.50
+ARG EMSDK_VERSION=3.1.37
 ARG BRANCH=master
-
 
 FROM --platform=linux/amd64 ubuntu:22.04 AS builder
 
@@ -21,9 +14,6 @@ ARG QT_VERSION
 ARG EMSDK_VERSION
 ARG BRANCH
 ARG DEBIAN_FRONTEND=noninteractive
-
-ENV CC=emcc
-ENV CXX=em++
 
 RUN apt-get update -q \
     && apt-get install -qy --no-install-recommends \
@@ -53,7 +43,7 @@ ENV QT_HOST_PATH=/opt/qt/${QT_VERSION}/gcc_64
 ENV QT_WASM_PATH=/opt/qt/${QT_VERSION}/wasm_multithread
 ENV LD_LIBRARY_PATH=${QT_HOST_PATH}/lib
 
-# ---- Emscripten (must match the version Qt for WASM was built with) ----------
+# ---- Emscripten (must match Qt-for-WASM's version) ---------------------------
 RUN git clone https://github.com/emscripten-core/emsdk.git /opt/emsdk \
     && cd /opt/emsdk \
     && ./emsdk install ${EMSDK_VERSION} \
@@ -63,7 +53,20 @@ RUN git clone https://github.com/emscripten-core/emsdk.git /opt/emsdk \
 RUN git clone --recursive --branch ${BRANCH} \
         https://github.com/moevm/mse1h2026-ripes.git /tmp/ripes
 
-# ---- Configure & build (mirrors upstream wasm-release.yml) -------------------
+# ---- Configure & build -------------------------------------------------------
+# Exception model:
+#   Qt 6.6 wasm_multithread from aqtinstall is built with JS-based exceptions
+#   (-fexceptions), so the app MUST be compiled and linked with -fexceptions too.
+#   This flag MUST be passed via CMAKE_CXX_FLAGS, CMAKE_C_FLAGS AND
+#   CMAKE_EXE_LINKER_FLAGS, otherwise unwind tables won't be generated and
+#   you'll get:
+#     "Exception thrown, but exception catching is not enabled"
+#
+# Debug flags like -sASSERTIONS=2 are intentionally NOT used here: they enable
+# an internal Emscripten check in Asyncify that wrongly aborts Qt's event loop
+# with "Cannot have multiple async operations in flight at once" when two
+# DOM callbacks (e.g. resize + mouse) arrive close together. In production
+# (ASSERTIONS=0) this code path is simply skipped.
 RUN cd /opt/emsdk && . ./emsdk_env.sh \
     && cd /tmp/ripes \
     && cmake \
@@ -79,6 +82,11 @@ RUN cd /opt/emsdk && . ./emsdk_env.sh \
         -DQT_HOST_PATH=${QT_HOST_PATH} \
         -DCMAKE_TOOLCHAIN_FILE=${QT_WASM_PATH}/lib/cmake/Qt6/qt.toolchain.cmake \
         -DCMAKE_PREFIX_PATH=${QT_WASM_PATH} \
+        -DCMAKE_C_FLAGS="-fexceptions" \
+        -DCMAKE_CXX_FLAGS="-fexceptions" \
+        -DCMAKE_C_FLAGS_RELEASE="-O3 -DNDEBUG -fexceptions" \
+        -DCMAKE_CXX_FLAGS_RELEASE="-O3 -DNDEBUG -fexceptions" \
+        -DCMAKE_EXE_LINKER_FLAGS="-fexceptions" \
     && cmake --build /tmp/ripes/build --parallel "$(nproc)"
 
 # ---- Stage artifacts ---------------------------------------------------------
@@ -90,14 +98,18 @@ RUN mkdir -p /opt/ripes-web \
        done \
     && cp /opt/ripes-web/Ripes.html /opt/ripes-web/index.html
 
-
 # =============================================================================
 FROM nginx:alpine AS runtime
 
 COPY --from=builder /opt/ripes-web/ /usr/share/nginx/html/
 
-# Multithread Qt-for-WASM uses pthreads, which require SharedArrayBuffer,
-# which the browser only enables on cross-origin-isolated pages.
+# Multithread Qt-for-WASM needs SharedArrayBuffer, which the browser only
+# enables on cross-origin-isolated pages (COOP + COEP + CORP).
+#
+# IMPORTANT: we do NOT redefine a local `types {}` block (that would wipe out
+# nginx's default mime.types). Instead we just override the type for .wasm.
+# We also exclude application/wasm from gzip_types, because gzipped wasm can
+# break WebAssembly.instantiateStreaming under some COEP setups.
 RUN printf '%s\n' \
     'server {' \
     '    listen 80;' \
@@ -106,18 +118,18 @@ RUN printf '%s\n' \
     '    index index.html;' \
     '' \
     '    gzip on;' \
-    '    gzip_types application/javascript application/wasm text/html image/svg+xml;' \
+    '    gzip_types application/javascript text/html image/svg+xml text/css application/json;' \
     '' \
-    '    types {' \
-    '        application/wasm wasm;' \
-    '        application/javascript js;' \
-    '        text/html html;' \
-    '        image/svg+xml svg;' \
+    '    add_header Cross-Origin-Opener-Policy   "same-origin"  always;' \
+    '    add_header Cross-Origin-Embedder-Policy "require-corp" always;' \
+    '    add_header Cross-Origin-Resource-Policy "same-origin"  always;' \
+    '' \
+    '    location ~* \.wasm$ {' \
+    '        default_type application/wasm;' \
+    '        add_header Cross-Origin-Opener-Policy   "same-origin"  always;' \
+    '        add_header Cross-Origin-Embedder-Policy "require-corp" always;' \
+    '        add_header Cross-Origin-Resource-Policy "same-origin"  always;' \
     '    }' \
-    '' \
-    '    add_header Cross-Origin-Opener-Policy   "same-origin"   always;' \
-    '    add_header Cross-Origin-Embedder-Policy "require-corp"  always;' \
-    '    add_header Cross-Origin-Resource-Policy "same-origin"   always;' \
     '' \
     '    location / {' \
     '        try_files $uri $uri/ =404;' \

@@ -51,5 +51,13 @@ docker compose build --build-arg BRANCH=my_branch ripes-web
 Notes on the WASM build:
 - Compiled with `RIPES_WITH_QPROCESS=OFF` and `RIPES_BUILD_TESTS=OFF` —
   `QProcess` and `QTest` are not available in the browser sandbox.
-- Uses Qt's `wasm_singlethread` kit (no SharedArrayBuffer / no COOP+COEP needed).
-- emsdk is pinned to `3.1.70`, which matches Qt 6.10.
+- Uses Qt's `wasm_multithread` kit. Pthreads in WASM require `SharedArrayBuffer`,
+  which the browser only enables on a cross-origin-isolated page, so the bundled
+  nginx config sets `Cross-Origin-Opener-Policy: same-origin` and
+  `Cross-Origin-Embedder-Policy: require-corp`.
+- `QT_VERSION` and `EMSDK_VERSION` build-args must stay in sync (see the table
+  at the top of `ripes_wasm.dockerfile`). A mismatch loads the page but throws
+  an uncaught C++ exception inside Qt's event loop right after `_main()`.
+- The page injects a small semi-transparent **RESTART** button in the top-right
+  corner. Clicking it does a hard reload of the WASM app — useful when the
+  simulator hangs or crashes.
