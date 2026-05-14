@@ -1,20 +1,10 @@
-# keyboardSevenSeg.s
-# Reads characters from the keyboard peripheral and shows the most
-# recent digit/letter on digit 0 of the 7-segment display.
-#
-# Required peripherals (in I/O tab): "Keyboard", "Seven Segment".
-#
-# !!! TODO: set the addresses below from the I/O tab -> "Exports" panel !!!
-#   Copy SEVEN_SEGMENT_0_BASE into SEG_BASE.
-#   Copy KEYBOARD_0_BASE      into KBD_BASE.
-#   Defaults assume:
-#     SEVEN_SEGMENT_0_BASE = 0xF0000000
-#     KEYBOARD_0_BASE      = 0xF0000DD0 (+0 = char, +4 = available)
+# Set the addresses below from the I/O tab -> "Exports" panel:
+#   SEG_BASE <- SEVEN_SEGMENT_0_BASE
+#   KBD_BASE <- KEYBOARD_0_BASE
 
-.equ SEG_BASE, 0xF0000000   # <-- set from Exports: SEVEN_SEGMENT_0_BASE
-.equ KBD_BASE, 0xF0000DD0   # <-- set from Exports: KEYBOARD_0_BASE
+.equ SEG_BASE, 0xF0000000
+.equ KBD_BASE, 0xF0000DD0
 
-# ASCII codes (Ripes assembler does not support 'x' character literals)
 .equ ASCII_0, 0x30
 .equ ASCII_9, 0x39
 .equ ASCII_A, 0x41
@@ -31,12 +21,11 @@ _start:
     la   s3, seg_alpha
 
 loop:
-    lw   t0, 4(s0)          # available?
+    lw   t0, 4(s0)
     beqz t0, loop
-    lw   t0, 0(s0)          # key code
+    lw   t0, 0(s0)
     andi t0, t0, 0xFF
 
-    # '0'..'9'
     li   t1, ASCII_0
     blt  t0, t1, no_digit
     li   t1, ASCII_9
@@ -47,7 +36,6 @@ loop:
     j    show
 
 no_digit:
-    # 'A'..'Z'
     li   t1, ASCII_A
     blt  t0, t1, no_alpha_u
     li   t1, ASCII_Z
@@ -55,7 +43,6 @@ no_digit:
     addi t0, t0, -ASCII_A
     j    take_alpha
 no_alpha_u:
-    # 'a'..'z'
     li   t1, ASCII_a
     blt  t0, t1, loop
     li   t1, ASCII_z
@@ -66,7 +53,7 @@ take_alpha:
     lbu  t2, 0(t1)
 
 show:
-    sw   t2, 0(s1)          # write to digit 0
+    sw   t2, 0(s1)
     j    loop
 
 .data
